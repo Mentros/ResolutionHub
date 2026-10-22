@@ -1,0 +1,58 @@
+<fieldset class="m-0 flex flex-col gap-4 border-0 p-0">
+  <legend class="text-sm font-medium">Checkpoints</legend>
+  <p crsdFieldDescription>
+    Each step can include what to do, a wiki link, a share-folder path, or any mix of those.
+  </p>
+  @for (step of checkpoints(); track step.key; let index = $index, first = $first, last = $last) {
+    <div crsdCard class="gap-4 p-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-lg font-semibold">Checkpoint {{ index + 1 }}</h2>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" crsdBtn variant="outline" size="sm" (click)="move(step.key, -1)" [disabled]="first">
+            Move up
+          </button>
+          <button type="button" crsdBtn variant="outline" size="sm" (click)="move(step.key, 1)" [disabled]="last">
+            Move down
+          </button>
+          <button type="button" crsdBtn variant="outline" size="sm" color="destructive" (click)="remove(step.key)">
+            Remove
+          </button>
+        </div>
+      </div>
+      <div crsdField>
+        <label crsdLabel [attr.for]="'checkpoint-instruction-' + step.key">What to do</label>
+        <textarea
+          [id]="'checkpoint-instruction-' + step.key"
+          crsdTextarea
+          class="min-h-24"
+          rows="3"
+          [value]="step.instruction"
+          (valueChange)="setField(step.key, 'instruction', $event)"
+        ></textarea>
+      </div>
+      <div crsdField>
+        <label crsdLabel [attr.for]="'checkpoint-wiki-' + step.key">Wiki link</label>
+        <input
+          [id]="'checkpoint-wiki-' + step.key"
+          type="url"
+          crsdInput
+          [value]="step.wikiUrl"
+          (valueChange)="setField(step.key, 'wikiUrl', $event)"
+          placeholder="https://wiki.example/teams-join"
+        />
+      </div>
+      <div crsdField>
+        <label crsdLabel [attr.for]="'checkpoint-share-' + step.key">Share folder</label>
+        <input
+          [id]="'checkpoint-share-' + step.key"
+          crsdInput
+          [value]="step.sharePath"
+          (valueChange)="setField(step.key, 'sharePath', $event)"
+          placeholder="\\server\share\folder"
+          spellcheck="false"
+        />
+      </div>
+    </div>
+  }
+  <button type="button" crsdBtn variant="outline" (click)="add()">Add checkpoint</button>
+</fieldset>

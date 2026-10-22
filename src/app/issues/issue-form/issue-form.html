@@ -1,0 +1,65 @@
+<section [class]="pageSection">
+  <a routerLink="/" [class]="backLink">Back to search</a>
+
+  @if (loading()) {
+    <div class="flex items-center gap-2 text-muted-foreground">
+      <crsd-spinner size="sm" />
+      <span>Loading issue…</span>
+    </div>
+  } @else if (notFound()) {
+    <div crsdEmpty>
+      <p crsdEmptyDescription>This issue is not in the runbook.</p>
+    </div>
+  } @else {
+    <header [class]="pageHead">
+      <h1 [class]="pageTitle">{{ heading() }}</h1>
+      <p [class]="pageLede">
+        Record what happened, tag the tools involved, and list the checkpoints that fixed it.
+      </p>
+    </header>
+
+    @if (error()) {
+      <div crsdAlert variant="error">
+        <p crsdAlertDescription>{{ error() }}</p>
+      </div>
+    }
+
+    <form class="flex flex-col gap-4" (submit)="save($event)">
+      <div crsdField>
+        <label crsdLabel for="issue-title">Title</label>
+        <input
+          id="issue-title"
+          crsdInput
+          [value]="title()"
+          (valueChange)="title.set($event)"
+          required
+          maxlength="200"
+          autocomplete="off"
+        />
+      </div>
+
+      <div crsdField>
+        <label crsdLabel for="issue-summary">What happened</label>
+        <textarea
+          id="issue-summary"
+          crsdTextarea
+          rows="4"
+          [value]="summary()"
+          (valueChange)="summary.set($event)"
+          maxlength="5000"
+        ></textarea>
+      </div>
+
+      <app-tag-editor [tags]="tags" [knownTags]="knownTags" />
+
+      <app-checkpoint-editor [checkpoints]="checkpoints" />
+
+      <div class="flex flex-wrap gap-2">
+        <button type="submit" [class]="btnPrimary" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Save issue' }}
+        </button>
+        <button type="button" routerLink="/" crsdBtn variant="outline">Cancel</button>
+      </div>
+    </form>
+  }
+</section>

@@ -1,0 +1,22 @@
+<div class="min-h-screen bg-background text-foreground">
+  <header
+    class="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-border bg-background/90 px-6 py-4 backdrop-blur"
+  >
+    <a routerLink="/" class="brand inline-flex items-center gap-3 no-underline text-foreground">
+      <span
+        class="flex size-9 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground"
+        aria-hidden="true"
+      >
+        RH
+      </span>
+      <span class="text-xl font-semibold tracking-tight">Resolution Hub</span>
+    </a>
+    <nav class="flex flex-wrap items-center gap-2">
+      <button type="button" routerLink="/tags" crsdBtn variant="ghost">Tags</button>
+      <button type="button" routerLink="/issues/new" crsdBtn>New issue</button>
+    </nav>
+  </header>
+  <main class="mx-auto w-full max-w-3xl px-4 py-8 pb-16">
+    <router-outlet />
+  </main>
+</div>

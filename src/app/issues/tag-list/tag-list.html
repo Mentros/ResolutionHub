@@ -1,0 +1,7 @@
+@if (tags.length > 0) {
+  <ul class="flex flex-wrap gap-2 p-0 m-0 list-none">
+    @for (tag of tags; track tag) {
+      <li crsdBadge color="secondary" size="sm">{{ tag }}</li>
+    }
+  </ul>
+}

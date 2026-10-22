@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+@import '@mentros/crsd-ui/tokens/tokens.css';
+
+@source '../node_modules/@mentros/crsd-ui/**/*.mjs';
+@source './**/*.{html,ts}';
+
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background-color: hsl(var(--crsd-background));
+  color: hsl(var(--crsd-foreground));
+}
+
+:focus-visible {
+  outline: 2px solid hsl(var(--crsd-ring));
+  outline-offset: 2px;
+}

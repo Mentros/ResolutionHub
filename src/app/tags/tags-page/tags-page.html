@@ -1,0 +1,72 @@
+<section [class]="pageSection">
+  <a routerLink="/" [class]="backLink">Back to search</a>
+
+  <header [class]="pageHead">
+    <h1 [class]="pageTitle">Tags</h1>
+    <p [class]="pageLede">
+      Define tag names here. When you edit an issue, you can only pick from this list, so typos will not
+      create stray tags.
+    </p>
+  </header>
+
+  @if (error()) {
+    <div crsdAlert variant="error">
+      <p crsdAlertDescription>{{ error() }}</p>
+    </div>
+  }
+
+  <form class="flex flex-col gap-4" (submit)="add($event)">
+    <div crsdField>
+      <label crsdLabel for="new-tag">New tag</label>
+      <input
+        id="new-tag"
+        crsdInput
+        [value]="draft()"
+        (valueChange)="draft.set($event)"
+        maxlength="40"
+        placeholder="Teams, Skype, tickets"
+        autocomplete="off"
+        [disabled]="saving()"
+      />
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button type="submit" [class]="btnPrimary" [disabled]="saving()">
+        {{ saving() ? 'Adding…' : 'Add tag' }}
+      </button>
+    </div>
+  </form>
+
+  @if (loading()) {
+    <div class="flex items-center gap-2 text-muted-foreground">
+      <crsd-spinner size="sm" />
+      <span>Loading tags…</span>
+    </div>
+  } @else if (loadError()) {
+    <div crsdAlert variant="error">
+      <p crsdAlertDescription>Could not load tags. Is the API running?</p>
+    </div>
+  } @else if (tags().length === 0) {
+    <div crsdEmpty>
+      <p crsdEmptyDescription>No tags yet. Add the first one above.</p>
+    </div>
+  } @else {
+    <ul class="grid list-none gap-3 p-0 m-0">
+      @for (name of tags(); track name) {
+        <li crsdCard class="flex flex-wrap items-center justify-between gap-3 p-4">
+          <span>{{ name }}</span>
+          <button
+            type="button"
+            crsdBtn
+            variant="outline"
+            size="sm"
+            color="destructive"
+            (click)="remove(name)"
+            [disabled]="saving()"
+          >
+            Remove
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</section>

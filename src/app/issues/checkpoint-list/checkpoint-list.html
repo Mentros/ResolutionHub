@@ -1,0 +1,43 @@
+<h2 class="text-xl font-semibold">Checkpoints</h2>
+@if (error()) {
+  <div crsdAlert variant="error">
+    <p crsdAlertDescription>{{ error() }}</p>
+  </div>
+}
+
+<ol class="grid list-none gap-3 p-0 m-0">
+  @for (step of checkpoints; track step.id) {
+    <li crsdCard class="grid grid-cols-[auto_1fr] gap-3 p-4">
+      <span
+        class="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+      >
+        {{ step.position + 1 }}
+      </span>
+      <div class="flex flex-col gap-3">
+        @if (step.instruction) {
+          <p class="whitespace-pre-wrap">{{ step.instruction }}</p>
+        }
+        @if (step.wikiUrl) {
+          <a class="break-all text-primary hover:underline" [href]="step.wikiUrl" target="_blank" rel="noopener noreferrer">
+            {{ step.wikiUrl }}
+          </a>
+        }
+        @if (step.sharePath) {
+          <div class="flex flex-wrap items-center gap-2">
+            <code class="min-w-48 flex-1 rounded-md bg-muted px-3 py-2 font-mono text-sm break-all">
+              {{ step.sharePath }}
+            </code>
+            <button type="button" crsdBtn variant="outline" size="sm" (click)="copyPath(step)">
+              {{ copiedId() === step.id ? 'Copied' : 'Copy path' }}
+            </button>
+          </div>
+        }
+      </div>
+    </li>
+  } @empty {
+    <li class="text-muted-foreground">
+      No checkpoints yet.
+      <a class="text-primary hover:underline" [routerLink]="['/issues', issueId, 'edit']">Add the steps.</a>
+    </li>
+  }
+</ol>

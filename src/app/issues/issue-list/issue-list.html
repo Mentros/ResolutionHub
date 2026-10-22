@@ -1,0 +1,62 @@
+<section [class]="pageSection">
+  <header [class]="pageHead">
+    <h1 [class]="pageTitle">Find a fix</h1>
+    <p [class]="pageLede">
+      Search past issues by what happened, or narrow them with tags such as Teams and Skype.
+    </p>
+  </header>
+
+  <div crsdField>
+    <label crsdLabel for="issue-search">Search</label>
+    <input
+      id="issue-search"
+      type="search"
+      crsdInput
+      [value]="draft()"
+      (valueChange)="onQueryInput($event)"
+      placeholder="meeting join, skype, firewall"
+      autocomplete="off"
+    />
+  </div>
+
+  <app-tag-filter [tags]="tags" [selected]="selectedTags" />
+
+  @if (hasFilter()) {
+    <button type="button" crsdBtn variant="link" (click)="clearFilters()">Clear search and tags</button>
+  }
+
+  @switch (results().status) {
+    @case ('loading') {
+      <div class="flex items-center gap-2 text-muted-foreground">
+        <crsd-spinner size="sm" label="Loading issues" />
+        <span>Loading issues…</span>
+      </div>
+    }
+    @case ('error') {
+      <div crsdAlert variant="error">
+        <p crsdAlertDescription>Could not load issues. Is the API running?</p>
+      </div>
+    }
+    @case ('ready') {
+      @if (results().issues.length === 0) {
+        <div crsdEmpty>
+          <p crsdEmptyDescription>
+            @if (hasFilter()) {
+              No issues match this search.
+            } @else {
+              No issues yet. <a routerLink="/issues/new" class="text-primary hover:underline">Record the first one.</a>
+            }
+          </p>
+        </div>
+      } @else {
+        <ul class="grid list-none gap-3 p-0 m-0">
+          @for (issue of results().issues; track issue.id) {
+            <li>
+              <app-issue-card [issue]="issue" />
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+</section>

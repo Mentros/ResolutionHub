@@ -1,0 +1,17 @@
+@if (tags().length > 0) {
+  <div class="flex flex-wrap gap-2" role="group" aria-label="Filter by tag">
+    @for (tag of tags(); track tag) {
+      <button
+        type="button"
+        crsdBtn
+        size="sm"
+        [variant]="isSelected(tag) ? 'solid' : 'outline'"
+        [color]="isSelected(tag) ? 'primary' : 'secondary'"
+        [attr.aria-pressed]="isSelected(tag)"
+        (click)="toggle(tag)"
+      >
+        {{ tag }}
+      </button>
+    }
+  </div>
+}
