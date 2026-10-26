@@ -1,5 +1,5 @@
 import { HttpResourceRef, httpResource } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
@@ -13,12 +13,17 @@ import {
   CrsdBtn,
   CrsdEmpty,
   CrsdEmptyDescription,
-  CrsdField,
-  CrsdInput,
-  CrsdLabel,
   CrsdSpinner,
 } from '@mentros/crsd-ui';
-import { pageHead, pageLede, pageSection, pageTitle } from '../../core/crsd-ui';
+import {
+  pageHead,
+  pageLede,
+  pageResults,
+  pageSearchPanel,
+  pageSection,
+  pageTitle,
+} from '../../core/crsd-ui';
+import { ListSearchInput } from '../../core/list-search-input/list-search-input';
 import { IssueCard } from '../issue-card/issue-card';
 import { TagFilter } from '../tag-filter/tag-filter';
 
@@ -33,9 +38,7 @@ type ResultState =
     RouterLink,
     IssueCard,
     TagFilter,
-    CrsdField,
-    CrsdLabel,
-    CrsdInput,
+    ListSearchInput,
     CrsdBtn,
     CrsdSpinner,
     CrsdEmpty,
@@ -47,6 +50,8 @@ type ResultState =
 })
 export class IssueList {
   protected readonly pageSection = pageSection;
+  protected readonly pageResults = pageResults;
+  protected readonly pageSearchPanel = pageSearchPanel;
   protected readonly pageHead = pageHead;
   protected readonly pageTitle = pageTitle;
   protected readonly pageLede = pageLede;
@@ -72,6 +77,13 @@ export class IssueList {
 
   readonly results = computed((): ResultState => listResultState(this.issueResource));
 
+  private readonly tagFilter = viewChild(TagFilter);
+
+  readonly resultCountLabel = computed(() => {
+    const count = this.results().status === 'ready' ? this.results().issues.length : 0;
+    return count === 1 ? '1 Ticket' : `${count} Tickets`;
+  });
+
   constructor() {
     this.queryChanges.pipe(debounceTime(200), takeUntilDestroyed()).subscribe((value) => {
       this.search.query.set(value);
@@ -83,10 +95,15 @@ export class IssueList {
     this.queryChanges.next(value);
   }
 
+  onSearchCleared(): void {
+    this.search.query.set('');
+  }
+
   clearFilters(): void {
     this.draft.set('');
     this.search.query.set('');
     this.selectedTags.set([]);
+    this.tagFilter()?.resetChipQuery();
   }
 }
 

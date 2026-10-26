@@ -5,17 +5,17 @@
     @case ('loading') {
       <div class="flex items-center gap-2 text-muted-foreground">
         <crsd-spinner size="sm" />
-        <span>Vorgang wird geladen…</span>
+        <span>Ticket wird geladen…</span>
       </div>
     }
     @case ('missing') {
       <div crsdEmpty>
-        <p crsdEmptyDescription>Dieser Vorgang ist nicht im Runbook.</p>
+        <p crsdEmptyDescription>Dieses Ticket ist nicht im Runbook.</p>
       </div>
     }
     @case ('error') {
       <div crsdAlert variant="error">
-        <p crsdAlertDescription>Dieser Vorgang konnte nicht geladen werden.</p>
+        <p crsdAlertDescription>Dieses Ticket konnte nicht geladen werden.</p>
       </div>
     }
     @case ('ready') {

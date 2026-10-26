@@ -1,0 +1,34 @@
+<div crsdField class="gap-1.5">
+  <label crsdLabel [attr.for]="inputId()">Suche</label>
+  <div class="relative">
+    <crsd-icon
+      name="search"
+      size="sm"
+      class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+      aria-hidden="true"
+    />
+    <input
+      [id]="inputId()"
+      type="search"
+      crsdInput
+      class="pl-9 pr-10"
+      [value]="value()"
+      (valueChange)="valueChange.emit($event)"
+      [placeholder]="placeholder()"
+      autocomplete="off"
+    />
+    @if (value().length > 0) {
+      <button
+        type="button"
+        crsdBtn
+        variant="ghost"
+        size="sm"
+        class="absolute right-0.5 top-1/2 h-8 w-8 min-w-8 -translate-y-1/2 px-0"
+        aria-label="Suchbegriff löschen"
+        (click)="onClear()"
+      >
+        <crsd-icon name="x" size="sm" />
+      </button>
+    }
+  </div>
+</div>

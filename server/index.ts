@@ -160,7 +160,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const id = Number(match[1]);
     if (method === 'GET') {
       const issue = getIssue(id);
-      if (!issue) throw new HttpError(404, 'Vorgang nicht gefunden.');
+      if (!issue) throw new HttpError(404, 'Ticket nicht gefunden.');
       send(res, 200, issue);
       return;
     }

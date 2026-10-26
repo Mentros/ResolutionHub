@@ -78,7 +78,7 @@ export class TagsPage {
     if (this.saving()) return;
     if (
       !confirm(
-        `Bezeichnung „${name}“ entfernen? Sie wird von Vorgängen und Wiki-Einträgen entfernt, die sie verwenden.`,
+        `Bezeichnung „${name}“ entfernen? Sie wird von Tickets und Wiki-Einträgen entfernt, die sie verwenden.`,
       )
     ) {
       return;

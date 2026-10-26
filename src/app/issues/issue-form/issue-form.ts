@@ -102,7 +102,7 @@ export class IssueForm {
               this.loading.set(false);
               this.notFound.set(error instanceof HttpErrorResponse && error.status === 404);
               if (!(error instanceof HttpErrorResponse) || error.status !== 404) {
-                this.error.set('Dieser Vorgang konnte nicht geladen werden.');
+                this.error.set('Dieses Ticket konnte nicht geladen werden.');
               }
               return of(null);
             }),
@@ -129,7 +129,7 @@ export class IssueForm {
       });
   }
 
-  readonly heading = computed(() => (this.editingId() == null ? 'Neuer Vorgang' : 'Vorgang bearbeiten'));
+  readonly heading = computed(() => (this.editingId() == null ? 'Neues Ticket' : 'Ticket bearbeiten'));
 
   save(event: Event): void {
     event.preventDefault();
@@ -148,7 +148,7 @@ export class IssueForm {
       },
       error: (error: unknown) => {
         this.saving.set(false);
-        this.error.set(apiErrorMessage(error, 'Der Vorgang konnte nicht gespeichert werden.'));
+        this.error.set(apiErrorMessage(error, 'Das Ticket konnte nicht gespeichert werden.'));
       },
     });
   }

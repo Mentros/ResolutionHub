@@ -118,6 +118,7 @@ export function initDatabase(dbPath: string): void {
     ensureSchemaV3();
   }
 
+  ensureDefaultProgramTags();
   seedIfEmpty();
   seedWikiSitesIfEmpty();
 }
@@ -542,7 +543,7 @@ function toWikiEntries(stored: StoredWikiEntry[]): WikiEntry[] {
 
 function parseIssueInput(body: unknown): IssueInput {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    throw new HttpError(400, 'Der Vorgang muss ein Objekt sein.');
+    throw new HttpError(400, 'Das Ticket muss ein Objekt sein.');
   }
   const record = body as Record<string, unknown>;
   const title = optionalText(record['title'], 'Titel', 200);
@@ -682,7 +683,7 @@ export function updateIssue(id: number, body: unknown): Issue {
   return transaction(() => {
     const existing = getIssue(id);
     if (!existing) {
-      throw new HttpError(404, 'Vorgang nicht gefunden.');
+      throw new HttpError(404, 'Ticket nicht gefunden.');
     }
     const stored: StoredCheckpoint[] = input.checkpoints.map((step) => ({
       instruction: step.instruction,
@@ -706,7 +707,7 @@ export function deleteIssue(id: number): void {
   transaction(() => {
     const result = db().prepare('DELETE FROM issues WHERE id = ?').run(id);
     if (Number(result.changes) === 0) {
-      throw new HttpError(404, 'Vorgang nicht gefunden.');
+      throw new HttpError(404, 'Ticket nicht gefunden.');
     }
     db().prepare('DELETE FROM issue_search WHERE rowid = ?').run(id);
   });
@@ -1128,11 +1129,16 @@ function ensureTags(names: string[]): void {
   }
 }
 
+/** Core program labels always available in Bezeichnungen / filter chips. */
+function ensureDefaultProgramTags(): void {
+  ensureTags(['EF3', 'BASIC', 'Crosslease']);
+}
+
 function seedIfEmpty(): void {
   const row = db().prepare('SELECT COUNT(*) AS count FROM issues').get();
   if (num(row?.['count']) > 0) return;
 
-  ensureTags(['Teams', 'tickets', 'Skype', 'documentation', 'error codes']);
+  ensureTags(['Teams', 'tickets', 'Skype', 'EF3', 'BASIC', 'Crosslease', 'documentation', 'error codes']);
 
   insertIssue(
     {
@@ -1193,7 +1199,7 @@ function seedWikiSitesIfEmpty(): void {
   const row = db().prepare('SELECT COUNT(*) AS count FROM wiki_sites').get();
   if (num(row?.['count']) > 0) return;
 
-  ensureTags(['Teams', 'Microsoft', 'Skype']);
+  ensureTags(['Teams', 'Microsoft', 'Skype', 'EF3', 'BASIC', 'Crosslease']);
 
   insertWikiSite(
     {

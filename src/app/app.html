@@ -1,25 +1,89 @@
 <div class="min-h-screen bg-background text-foreground">
-  <header
-    class="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-border bg-background/90 px-6 py-4 backdrop-blur"
-  >
-    <a routerLink="/" class="brand inline-flex items-center gap-3 no-underline text-foreground">
-      <span
-        class="flex size-9 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground"
-        aria-hidden="true"
-      >
-        RH
-      </span>
-      <span class="text-xl font-semibold tracking-tight">Resolution Hub</span>
-    </a>
-    <nav class="flex flex-wrap items-center gap-2">
-      <button type="button" routerLink="/" crsdBtn variant="ghost">Vorgänge</button>
-      <button type="button" routerLink="/wikis" crsdBtn variant="ghost" title="Externe Dokumentation (Lesezeichen)">Wikis</button>
-      <button type="button" routerLink="/tags" crsdBtn variant="ghost">Bezeichnungen</button>
-      <button type="button" routerLink="/issues/new" crsdBtn>Neuer Vorgang</button>
-      <button type="button" routerLink="/wikis/new" crsdBtn variant="outline" title="Externe Seite indexieren, kein Runbook">Externes Wiki</button>
-    </nav>
+
+  <header class="sticky top-0 z-10 border-b border-border bg-background">
+
+    <div class="mx-auto flex w-full max-w-3xl items-center justify-between gap-6 px-4 py-3">
+
+      <a routerLink="/" class="brand inline-flex items-center gap-3 no-underline text-foreground">
+
+        <span
+
+          class="flex size-9 items-center justify-center rounded-sm bg-primary text-xs font-bold text-primary-foreground"
+
+          aria-hidden="true"
+
+        >
+
+          RH
+
+        </span>
+
+        <span class="text-xl font-semibold tracking-tight">Resolution Hub</span>
+
+      </a>
+
+
+
+      <nav class="flex items-center gap-0.5" aria-label="Hauptnavigation">
+
+        <a
+
+          routerLink="/"
+
+          routerLinkActive="bg-muted text-foreground"
+
+          [routerLinkActiveOptions]="{ exact: true }"
+
+          class="inline-flex h-9 items-center rounded-sm px-3 text-sm font-medium text-muted-foreground no-underline transition-colors hover:bg-muted/70 hover:text-foreground"
+
+        >
+
+          Tickets
+
+        </a>
+
+        <a
+
+          routerLink="/wikis"
+
+          routerLinkActive="bg-muted text-foreground"
+
+          class="inline-flex h-9 items-center rounded-sm px-3 text-sm font-medium text-muted-foreground no-underline transition-colors hover:bg-muted/70 hover:text-foreground"
+
+        >
+
+          Wikis
+
+        </a>
+
+        <a
+
+          routerLink="/tags"
+
+          routerLinkActive="bg-muted text-foreground"
+
+          [routerLinkActiveOptions]="{ exact: true }"
+
+          class="inline-flex h-9 items-center rounded-sm px-3 text-sm font-medium text-muted-foreground no-underline transition-colors hover:bg-muted/70 hover:text-foreground"
+
+        >
+
+          Bezeichnungen
+
+        </a>
+
+      </nav>
+
+    </div>
+
   </header>
+
   <main class="mx-auto w-full max-w-3xl px-4 py-8 pb-16">
+
     <router-outlet />
+
   </main>
+
 </div>
+
+

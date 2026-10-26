@@ -98,7 +98,7 @@ export class IssueDetail {
 
   remove(issue: Issue): void {
     if (this.deleting()) return;
-    if (!confirm('Diesen Vorgang löschen? Die zugehörigen Schritte werden ebenfalls entfernt.')) return;
+    if (!confirm('Dieses Ticket löschen? Die zugehörigen Schritte werden ebenfalls entfernt.')) return;
     this.deleting.set(true);
     this.error.set(null);
     this.api.deleteIssue(issue.id).subscribe({
@@ -107,7 +107,7 @@ export class IssueDetail {
       },
       error: () => {
         this.deleting.set(false);
-        this.error.set('Der Vorgang konnte nicht gelöscht werden.');
+        this.error.set('Das Ticket konnte nicht gelöscht werden.');
       },
     });
   }

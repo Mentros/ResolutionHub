@@ -1,65 +1,88 @@
-<section [class]="pageSection">
-  <header [class]="pageHead">
-    <h1 [class]="pageTitle">Wiki finden</h1>
-    <p [class]="pageLede">
-      Lesezeichen für externe Dokumentation (kein Runbook). Suche nach Name oder Notizen; filtere nach Programmen und Wiki-Themen pro Seite.
-    </p>
-  </header>
-
-  <div crsdField>
-    <label crsdLabel for="wiki-search">Suche</label>
-    <input
-      id="wiki-search"
-      type="search"
-      crsdInput
-      [value]="draft()"
-      (valueChange)="onQueryInput($event)"
-      placeholder="Teams-Besprechungen, Skype-Anmeldung"
-      autocomplete="off"
-    />
-  </div>
-
-  <app-tag-filter [tags]="tagCatalog" [selected]="selectedTags" groupLabel="Nach Bezeichnung filtern" />
-
-  @if (hasFilter()) {
-    <button type="button" crsdBtn variant="link" (click)="clearFilters()">Suche und Filter zurücksetzen</button>
-  }
-
-  <div [class]="pageResults">
-  @switch (results().status) {
-    @case ('loading') {
-      <div class="flex items-center gap-2 text-muted-foreground">
-        <crsd-spinner size="sm" label="Wikis werden geladen" />
-        <span>Wikis werden geladen…</span>
-      </div>
-    }
-    @case ('error') {
-      <div crsdAlert variant="error">
-        <p crsdAlertDescription>Wikis konnten nicht geladen werden. Läuft die API?</p>
-      </div>
-    }
-    @case ('ready') {
-      @if (results().sites.length === 0) {
-        <div crsdEmpty>
-          <p crsdEmptyDescription>
-            @if (hasFilter()) {
-              Keine Wikis entsprechen dieser Suche.
-            } @else {
-              Noch keine Wikis.
-              <a routerLink="/wikis/new" class="text-primary hover:underline">Erste externe Dokumentation indexieren.</a>
-            }
-          </p>
-        </div>
-      } @else {
-        <ul class="grid list-none gap-3 p-0 m-0">
-          @for (site of results().sites; track site.id) {
-            <li>
-              <app-wiki-site-card [site]="site" />
-            </li>
-          }
-        </ul>
-      }
-    }
-  }
-  </div>
-</section>
+<section [class]="pageSection">
+  <header [class]="pageHead">
+    <h1 [class]="pageTitle">Wiki finden</h1>
+    <p [class]="pageLede">
+      Lesezeichen für externe Dokumentation (kein Runbook). Suche nach Name oder Notizen; filtere nach Programmen und Wiki-Themen pro Seite.
+    </p>
+  </header>
+
+  <div [class]="pageSearchPanel">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <span class="text-sm font-medium text-foreground">Suche und Filter</span>
+      @if (hasFilter()) {
+        <button type="button" crsdBtn variant="link" size="sm" class="h-auto px-0 py-0" (click)="clearFilters()">
+          Alles zurücksetzen
+        </button>
+      }
+    </div>
+
+    <app-list-search-input
+      inputId="wiki-search"
+      placeholder="Teams-Besprechungen, Skype-Anmeldung"
+      [value]="draft()"
+      (valueChange)="onQueryInput($event)"
+      (cleared)="onSearchCleared()"
+    />
+
+    <app-tag-filter [tags]="tagCatalog" [selected]="selectedTags" groupLabel="Nach Bezeichnung filtern" [embedded]="true" />
+  </div>
+
+  <div [class]="pageResults">
+    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <div class="flex min-h-8 flex-wrap items-center gap-2">
+        @if (results().status === 'ready') {
+          <p class="m-0 text-sm text-muted-foreground">
+            {{ resultCountLabel() }}
+            @if (hasFilter()) {
+              <span aria-hidden="true"> · </span>
+              <span class="text-foreground/80">gefiltert</span>
+            }
+          </p>
+        } @else if (results().status === 'loading') {
+          <crsd-spinner size="sm" label="Wikis werden geladen" />
+          <span class="text-sm text-muted-foreground">Wikis werden geladen…</span>
+        }
+      </div>
+      <a
+        routerLink="/wikis/new"
+        crsdBtn
+        size="sm"
+        class="shrink-0 rounded-sm"
+        title="Externe Seite indexieren, kein Runbook"
+      >
+        Externes Wiki
+      </a>
+    </div>
+
+    @switch (results().status) {
+      @case ('error') {
+        <div crsdAlert variant="error">
+          <p crsdAlertDescription>Wikis konnten nicht geladen werden. Läuft die API?</p>
+        </div>
+      }
+      @case ('ready') {
+        @if (results().sites.length === 0) {
+          <div crsdEmpty>
+            <p crsdEmptyDescription>
+              @if (hasFilter()) {
+                Keine Wikis entsprechen dieser Suche.
+              } @else {
+                Noch keine Wikis.
+                <a routerLink="/wikis/new" class="text-primary hover:underline">Erste externe Dokumentation indexieren.</a>
+              }
+            </p>
+          </div>
+        } @else {
+          <ul class="grid list-none gap-3 p-0 m-0">
+            @for (site of results().sites; track site.id) {
+              <li>
+                <app-wiki-site-card [site]="site" />
+              </li>
+            }
+          </ul>
+        }
+      }
+    }
+  </div>
+</section>
+

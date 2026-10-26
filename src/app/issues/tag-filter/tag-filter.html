@@ -1,33 +1,48 @@
 @if (tags().length > 0) {
-  <section
-    class="flex flex-col gap-2 rounded-lg border border-border bg-muted/25 px-3 py-2.5"
-    [attr.aria-label]="groupLabel"
-  >
+  <section [class]="panelClass()" [attr.aria-label]="groupLabel">
     <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-      <span class="text-sm font-medium leading-none">{{ groupLabel }}</span>
+      <div class="flex items-center gap-2">
+        <crsd-icon name="filter" size="sm" class="text-muted-foreground" aria-hidden="true" />
+        <span class="text-sm font-medium leading-none">{{ groupLabel }}</span>
+      </div>
       @if (selectedCount() > 0) {
         <button type="button" crsdBtn variant="link" size="sm" class="h-auto px-0 py-0" (click)="clearSelected()">
-          Zurücksetzen ({{ selectedCount() }})
+          Auswahl löschen ({{ selectedCount() }})
         </button>
       }
     </div>
 
+    @if (showChipQuery()) {
+      <input
+        type="search"
+        crsdInput
+        class="h-9"
+        [value]="chipQuery()"
+        (valueChange)="chipQuery.set($event)"
+        placeholder="Bezeichnung einschränken…"
+        autocomplete="off"
+        aria-label="Bezeichnungen filtern"
+      />
+    }
+
     <div
-      class="flex flex-wrap gap-1.5 pr-0.5"
+      class="flex flex-wrap gap-2 pr-0.5"
       [class.overflow-y-auto]="showExpandToggle() && !expanded()"
       [style.max-height]="showExpandToggle() && !expanded() ? scrollMaxHeight : null"
       role="group"
     >
-      @for (tag of tags(); track tag) {
+      @for (tag of visibleTags(); track tag) {
         <button
           type="button"
-          class="label-filter-chip inline-flex max-w-[12rem] shrink-0 items-center truncate rounded-full border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          class="label-filter-chip inline-flex max-w-[12rem] shrink-0 items-center truncate rounded-md border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           [class.border-primary]="isSelected(tag)"
           [class.bg-primary]="isSelected(tag)"
           [class.text-primary-foreground]="isSelected(tag)"
+          [class.shadow-sm]="isSelected(tag)"
           [class.border-border]="!isSelected(tag)"
           [class.bg-background]="!isSelected(tag)"
           [class.text-foreground]="!isSelected(tag)"
+          [class.hover:border-primary/40]="!isSelected(tag)"
           [class.hover:bg-muted]="!isSelected(tag)"
           [attr.aria-pressed]="isSelected(tag)"
           [attr.title]="tag"
@@ -37,6 +52,10 @@
         </button>
       }
     </div>
+
+    @if (showChipQuery() && chipQuery().trim() && visibleTags().length === 0) {
+      <p class="m-0 text-xs text-muted-foreground">Keine Bezeichnung passt zu „{{ chipQuery().trim() }}“.</p>
+    }
 
     @if (showExpandToggle()) {
       <button
@@ -50,7 +69,7 @@
         @if (expanded()) {
           Weniger anzeigen
         } @else {
-          Alle {{ tags().length }} Bezeichnungen anzeigen
+          Alle {{ visibleTags().length }} Bezeichnungen anzeigen
         }
       </button>
     }
