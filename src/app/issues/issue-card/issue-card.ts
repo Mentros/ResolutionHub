@@ -1,18 +1,12 @@
-import { DatePipe } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import {
-  CrsdCard,
-  CrsdCardDescription,
-  CrsdCardFooter,
-  CrsdCardTitle,
-} from '@mentros/crsd-ui';
+import { SearchCardFooter } from '../../core/search-card-footer/search-card-footer';
 import { IssueSummary } from '../../core/models';
-import { TagList } from '../tag-list/tag-list';
+import { CrsdCard, CrsdCardDescription, CrsdCardTitle } from '@mentros/crsd-ui';
 
 @Component({
   selector: 'app-issue-card',
-  imports: [RouterLink, DatePipe, TagList, CrsdCard, CrsdCardTitle, CrsdCardDescription, CrsdCardFooter],
+  imports: [RouterLink, SearchCardFooter, CrsdCard, CrsdCardTitle, CrsdCardDescription],
   templateUrl: './issue-card.html',
   styles: ':host { display: contents; }',
 })
@@ -20,6 +14,6 @@ export class IssueCard {
   @Input({ required: true }) issue!: IssueSummary;
 
   checkpointLabel(count: number): string {
-    return count === 1 ? '1 checkpoint' : `${count} checkpoints`;
+    return count === 1 ? '1 Schritt' : `${count} Schritte`;
   }
 }

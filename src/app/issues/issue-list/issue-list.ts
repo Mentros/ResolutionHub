@@ -3,7 +3,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
-import { TAGS_URL, issueListRequest } from '../../core/issue-api';
+import { issueListRequest } from '../../core/issue-api';
+import { PROGRAMS_URL } from '../../core/labels-api';
 import { IssueSearch } from '../../core/issue-search';
 import { IssueSummary } from '../../core/models';
 import {
@@ -50,22 +51,22 @@ export class IssueList {
   protected readonly pageTitle = pageTitle;
   protected readonly pageLede = pageLede;
   readonly search = inject(IssueSearch);
-  readonly selectedTags = this.search.tags;
+  readonly selectedPrograms = this.search.programs;
   readonly draft = signal(this.search.query());
   readonly hasFilter = computed(
-    () => this.search.query().trim().length > 0 || this.selectedTags().length > 0,
+    () => this.search.query().trim().length > 0 || this.selectedPrograms().length > 0,
   );
 
   private readonly queryChanges = new Subject<string>();
 
-  private readonly tagResource = httpResource<string[]>(() => ({ url: TAGS_URL }), {
+  private readonly programResource = httpResource<string[]>(() => ({ url: PROGRAMS_URL }), {
     defaultValue: [] as string[],
   });
 
-  readonly tags = computed(() => tagListValue(this.tagResource));
+  readonly programs = computed(() => catalogValue(this.programResource));
 
   private readonly issueResource = httpResource<IssueSummary[]>(
-    () => issueListRequest(this.search.query(), this.search.tags()),
+    () => issueListRequest(this.search.query(), this.search.programs()),
     { defaultValue: [] as IssueSummary[] },
   );
 
@@ -85,11 +86,11 @@ export class IssueList {
   clearFilters(): void {
     this.draft.set('');
     this.search.query.set('');
-    this.selectedTags.set([]);
+    this.selectedPrograms.set([]);
   }
 }
 
-function tagListValue(resource: HttpResourceRef<string[]>): string[] {
+function catalogValue(resource: HttpResourceRef<string[]>): string[] {
   return resource.status() === 'error' ? [] : resource.value();
 }
 

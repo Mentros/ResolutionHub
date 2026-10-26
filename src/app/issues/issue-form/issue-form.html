@@ -1,20 +1,20 @@
 <section [class]="pageSection">
-  <a routerLink="/" [class]="backLink">Back to search</a>
+  <app-back-link link="/">Zurück zur Suche</app-back-link>
 
   @if (loading()) {
     <div class="flex items-center gap-2 text-muted-foreground">
       <crsd-spinner size="sm" />
-      <span>Loading issue…</span>
+      <span>Vorgang wird geladen…</span>
     </div>
   } @else if (notFound()) {
     <div crsdEmpty>
-      <p crsdEmptyDescription>This issue is not in the runbook.</p>
+      <p crsdEmptyDescription>Dieser Vorgang ist nicht im Runbook.</p>
     </div>
   } @else {
     <header [class]="pageHead">
       <h1 [class]="pageTitle">{{ heading() }}</h1>
       <p [class]="pageLede">
-        Record what happened, tag the tools involved, and list the checkpoints that fixed it.
+        Halte fest, was passiert ist, ordne die betroffenen Programme zu und liste die Schritte auf, mit denen es behoben wurde.
       </p>
     </header>
 
@@ -24,9 +24,9 @@
       </div>
     }
 
-    <form class="flex flex-col gap-4" (submit)="save($event)">
+    <form class="flex flex-col gap-4" novalidate (submit)="save($event)">
       <div crsdField>
-        <label crsdLabel for="issue-title">Title</label>
+        <label crsdLabel for="issue-title">Titel</label>
         <input
           id="issue-title"
           crsdInput
@@ -39,7 +39,7 @@
       </div>
 
       <div crsdField>
-        <label crsdLabel for="issue-summary">What happened</label>
+        <label crsdLabel for="issue-summary">Was passiert ist</label>
         <textarea
           id="issue-summary"
           crsdTextarea
@@ -50,15 +50,21 @@
         ></textarea>
       </div>
 
-      <app-tag-editor [tags]="tags" [knownTags]="knownTags" />
+      <app-label-picker
+        fieldLabel="Programme"
+        inputId="issue-programs"
+        [selected]="programs"
+        [catalog]="knownPrograms"
+        unknownMessage="Wähle ein vorhandenes Programm oder lege ein neues auf der Seite Bezeichnungen an."
+      />
 
       <app-checkpoint-editor [checkpoints]="checkpoints" />
 
       <div class="flex flex-wrap gap-2">
         <button type="submit" [class]="btnPrimary" [disabled]="saving()">
-          {{ saving() ? 'Saving…' : 'Save issue' }}
+          {{ saving() ? 'Wird gespeichert…' : 'Vorgang speichern' }}
         </button>
-        <button type="button" routerLink="/" crsdBtn variant="outline">Cancel</button>
+        <button type="button" routerLink="/" crsdBtn variant="outline">Abbrechen</button>
       </div>
     </form>
   }

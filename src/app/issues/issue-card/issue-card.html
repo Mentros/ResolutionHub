@@ -1,16 +1,19 @@
 <a
   crsdCard
   variant="elevated"
-  class="block gap-3 p-5 no-underline transition-colors hover:border-primary/40"
+  class="flex flex-col gap-0 p-5 no-underline transition-colors hover:border-primary/40"
   [routerLink]="['/issues', issue.id]"
 >
-  <h2 crsdCardTitle class="text-xl">{{ issue.title }}</h2>
-  @if (issue.summary) {
-    <p crsdCardDescription class="line-clamp-3">{{ issue.summary }}</p>
-  }
-  <div crsdCardFooter class="gap-4 px-0 pb-0 pt-0 text-sm text-muted-foreground">
-    <span>{{ checkpointLabel(issue.checkpointCount) }}</span>
-    <time [attr.datetime]="issue.updatedAt">{{ issue.updatedAt | date: 'mediumDate' }}</time>
+  <div class="flex flex-col gap-2">
+    <h2 crsdCardTitle class="text-xl leading-snug">{{ issue.title }}</h2>
+    @if (issue.summary) {
+      <p crsdCardDescription class="line-clamp-3 text-sm leading-relaxed">{{ issue.summary }}</p>
+    }
   </div>
-  <app-tag-list [tags]="issue.tags" />
+
+  <app-search-card-footer
+    [statLabel]="checkpointLabel(issue.checkpointCount)"
+    [updatedAt]="issue.updatedAt"
+    [programs]="issue.programs"
+  />
 </a>

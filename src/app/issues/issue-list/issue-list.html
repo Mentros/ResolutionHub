@@ -1,40 +1,40 @@
 <section [class]="pageSection">
   <header [class]="pageHead">
-    <h1 [class]="pageTitle">Find a fix</h1>
+    <h1 [class]="pageTitle">Lösung finden</h1>
     <p [class]="pageLede">
-      Search past issues by what happened, or narrow them with tags such as Teams and Skype.
+      Suche vergangene Vorgänge danach, was passiert ist, oder grenze sie nach Programm ein, zum Beispiel Teams und Skype.
     </p>
   </header>
 
   <div crsdField>
-    <label crsdLabel for="issue-search">Search</label>
+    <label crsdLabel for="issue-search">Suche</label>
     <input
       id="issue-search"
       type="search"
       crsdInput
       [value]="draft()"
       (valueChange)="onQueryInput($event)"
-      placeholder="meeting join, skype, firewall"
+      placeholder="Meeting beitreten, Skype, Firewall"
       autocomplete="off"
     />
   </div>
 
-  <app-tag-filter [tags]="tags" [selected]="selectedTags" />
+  <app-tag-filter [tags]="programs" [selected]="selectedPrograms" groupLabel="Nach Programm filtern" />
 
   @if (hasFilter()) {
-    <button type="button" crsdBtn variant="link" (click)="clearFilters()">Clear search and tags</button>
+    <button type="button" crsdBtn variant="link" (click)="clearFilters()">Suche und Programme zurücksetzen</button>
   }
 
   @switch (results().status) {
     @case ('loading') {
       <div class="flex items-center gap-2 text-muted-foreground">
-        <crsd-spinner size="sm" label="Loading issues" />
-        <span>Loading issues…</span>
+        <crsd-spinner size="sm" label="Vorgänge werden geladen" />
+        <span>Vorgänge werden geladen…</span>
       </div>
     }
     @case ('error') {
       <div crsdAlert variant="error">
-        <p crsdAlertDescription>Could not load issues. Is the API running?</p>
+        <p crsdAlertDescription>Vorgänge konnten nicht geladen werden. Läuft die API?</p>
       </div>
     }
     @case ('ready') {
@@ -42,9 +42,9 @@
         <div crsdEmpty>
           <p crsdEmptyDescription>
             @if (hasFilter()) {
-              No issues match this search.
+              Keine Vorgänge entsprechen dieser Suche.
             } @else {
-              No issues yet. <a routerLink="/issues/new" class="text-primary hover:underline">Record the first one.</a>
+              Noch keine Vorgänge. <a routerLink="/issues/new" class="text-primary hover:underline">Ersten Vorgang erfassen.</a>
             }
           </p>
         </div>

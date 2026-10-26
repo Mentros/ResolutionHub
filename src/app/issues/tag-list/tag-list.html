@@ -1,7 +1,45 @@
 @if (tags.length > 0) {
-  <ul class="flex flex-wrap gap-2 p-0 m-0 list-none">
-    @for (tag of tags; track tag) {
-      <li crsdBadge color="secondary" size="sm">{{ tag }}</li>
+  <div class="tag-list-root flex min-w-0 flex-col gap-1">
+    @if (caption) {
+      <span class="text-xs font-medium text-muted-foreground">{{ caption }}</span>
     }
-  </ul>
+    <ul class="flex flex-wrap gap-1.5 p-0 m-0 list-none">
+      @for (tag of visibleTags(); track tag) {
+        <li
+          crsdBadge
+          [color]="badgeColor()"
+          variant="soft"
+          size="sm"
+          class="max-w-[12rem] truncate"
+          [attr.title]="tag"
+        >
+          {{ tag }}
+        </li>
+      }
+      @if (hiddenCount() > 0) {
+        <li
+          crsdBadge
+          color="secondary"
+          variant="outline"
+          size="sm"
+          class="tabular-nums"
+          [attr.title]="'Außerdem: ' + tags.slice(collapseAfter).join(', ')"
+        >
+          +{{ hiddenCount() }}
+        </li>
+      }
+    </ul>
+    @if (showToggle()) {
+      <button
+        type="button"
+        crsdBtn
+        variant="link"
+        size="sm"
+        class="h-auto self-start px-0 py-0 text-xs"
+        (click)="expanded.set(!expanded()); $event.stopPropagation()"
+      >
+        {{ expanded() ? 'Weniger anzeigen' : 'Alle ' + tags.length + ' anzeigen' }}
+      </button>
+    }
+  </div>
 }

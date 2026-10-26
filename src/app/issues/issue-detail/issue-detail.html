@@ -1,36 +1,39 @@
 <section [class]="pageSection">
-  <a routerLink="/" [class]="backLink">Back to search</a>
+  <app-back-link link="/">Zurück zur Suche</app-back-link>
 
   @switch (state().status) {
     @case ('loading') {
       <div class="flex items-center gap-2 text-muted-foreground">
         <crsd-spinner size="sm" />
-        <span>Loading issue…</span>
+        <span>Vorgang wird geladen…</span>
       </div>
     }
     @case ('missing') {
       <div crsdEmpty>
-        <p crsdEmptyDescription>This issue is not in the runbook.</p>
+        <p crsdEmptyDescription>Dieser Vorgang ist nicht im Runbook.</p>
       </div>
     }
     @case ('error') {
       <div crsdAlert variant="error">
-        <p crsdAlertDescription>Could not load this issue.</p>
+        <p crsdAlertDescription>Dieser Vorgang konnte nicht geladen werden.</p>
       </div>
     }
     @case ('ready') {
       @if (state().issue; as issue) {
         <header [class]="pageHead">
-          <app-tag-list [tags]="issue.tags" />
           <h1 [class]="pageTitle">{{ issue.title }}</h1>
           @if (issue.summary) {
             <p [class]="pageLede">{{ issue.summary }}</p>
           }
-          <p class="text-sm text-muted-foreground">
-            <time [attr.datetime]="issue.updatedAt">Updated {{ issue.updatedAt | date: 'medium' }}</time>
-          </p>
-          <div class="flex flex-wrap gap-2">
-            <button type="button" crsdBtn variant="outline" [routerLink]="['/issues', issue.id, 'edit']">Edit</button>
+
+          <app-detail-record-meta
+            [statLabel]="checkpointLabel(issue.checkpoints.length)"
+            [updatedAt]="issue.updatedAt"
+            [programs]="issue.programs"
+          >
+            <button type="button" crsdBtn variant="outline" [routerLink]="['/issues', issue.id, 'edit']">
+              Bearbeiten
+            </button>
             <button
               type="button"
               crsdBtn
@@ -39,9 +42,9 @@
               [disabled]="deleting()"
               (click)="remove(issue)"
             >
-              {{ deleting() ? 'Deleting…' : 'Delete' }}
+              {{ deleting() ? 'Wird gelöscht…' : 'Löschen' }}
             </button>
-          </div>
+          </app-detail-record-meta>
         </header>
 
         @if (error()) {

@@ -8,32 +8,18 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Issue, IssueInput, IssueSummary } from './models';
 
-export const TAGS_URL = '/api/tags';
 export const ISSUES_URL = '/api/issues';
 
-export function issueListRequest(query: string, tags: string[]): HttpResourceRequest {
+export function issueListRequest(query: string, programs: string[]): HttpResourceRequest {
   let params = new HttpParams();
   const trimmed = query.trim();
   if (trimmed) {
     params = params.set('q', trimmed);
   }
-  for (const tag of tags) {
-    params = params.append('tags', tag);
+  for (const program of programs) {
+    params = params.append('programs', program);
   }
   return { url: ISSUES_URL, params };
-}
-
-@Injectable({ providedIn: 'root' })
-export class TagApi {
-  private readonly http = inject(HttpClient);
-
-  createTag(name: string): Observable<{ name: string }> {
-    return this.http.post<{ name: string }>(TAGS_URL, { name });
-  }
-
-  deleteTag(name: string): Observable<void> {
-    return this.http.delete<void>(TAGS_URL, { body: { name } });
-  }
 }
 
 @Injectable({ providedIn: 'root' })

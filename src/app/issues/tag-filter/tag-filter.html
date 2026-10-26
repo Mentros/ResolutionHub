@@ -1,17 +1,58 @@
 @if (tags().length > 0) {
-  <div class="flex flex-wrap gap-2" role="group" aria-label="Filter by tag">
-    @for (tag of tags(); track tag) {
+  <section
+    class="flex flex-col gap-2 rounded-lg border border-border bg-muted/25 px-3 py-2.5"
+    [attr.aria-label]="groupLabel"
+  >
+    <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+      <span class="text-sm font-medium leading-none">{{ groupLabel }}</span>
+      @if (selectedCount() > 0) {
+        <button type="button" crsdBtn variant="link" size="sm" class="h-auto px-0 py-0" (click)="clearSelected()">
+          Zurücksetzen ({{ selectedCount() }})
+        </button>
+      }
+    </div>
+
+    <div
+      class="flex flex-wrap gap-1.5 pr-0.5"
+      [class.overflow-y-auto]="showExpandToggle() && !expanded()"
+      [style.max-height]="showExpandToggle() && !expanded() ? scrollMaxHeight : null"
+      role="group"
+    >
+      @for (tag of tags(); track tag) {
+        <button
+          type="button"
+          class="label-filter-chip inline-flex max-w-[12rem] shrink-0 items-center truncate rounded-full border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          [class.border-primary]="isSelected(tag)"
+          [class.bg-primary]="isSelected(tag)"
+          [class.text-primary-foreground]="isSelected(tag)"
+          [class.border-border]="!isSelected(tag)"
+          [class.bg-background]="!isSelected(tag)"
+          [class.text-foreground]="!isSelected(tag)"
+          [class.hover:bg-muted]="!isSelected(tag)"
+          [attr.aria-pressed]="isSelected(tag)"
+          [attr.title]="tag"
+          (click)="toggle(tag)"
+        >
+          {{ tag }}
+        </button>
+      }
+    </div>
+
+    @if (showExpandToggle()) {
       <button
         type="button"
         crsdBtn
+        variant="link"
         size="sm"
-        [variant]="isSelected(tag) ? 'solid' : 'outline'"
-        [color]="isSelected(tag) ? 'primary' : 'secondary'"
-        [attr.aria-pressed]="isSelected(tag)"
-        (click)="toggle(tag)"
+        class="h-auto self-start px-0 py-0 text-xs"
+        (click)="expanded.set(!expanded())"
       >
-        {{ tag }}
+        @if (expanded()) {
+          Weniger anzeigen
+        } @else {
+          Alle {{ tags().length }} Bezeichnungen anzeigen
+        }
       </button>
     }
-  </div>
+  </section>
 }

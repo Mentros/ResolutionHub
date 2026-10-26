@@ -1,0 +1,66 @@
+<section [class]="pageSection">
+  <header [class]="pageHead">
+    <h1 [class]="pageTitle">Wiki finden</h1>
+    <p [class]="pageLede">
+      Suche gespeicherte Wikis nach Name oder Notizen. Filtere nach Programmen und Wiki-Themen, die einzelnen Seiten zugeordnet sind.
+    </p>
+  </header>
+
+  <div crsdField>
+    <label crsdLabel for="wiki-search">Suche</label>
+    <input
+      id="wiki-search"
+      type="search"
+      crsdInput
+      [value]="draft()"
+      (valueChange)="onQueryInput($event)"
+      placeholder="Teams-Besprechungen, Skype-Anmeldung"
+      autocomplete="off"
+    />
+  </div>
+
+  <div class="flex flex-col gap-3">
+    <app-tag-filter [tags]="programs" [selected]="selectedPrograms" groupLabel="Nach Programm filtern" />
+    <app-tag-filter [tags]="topics" [selected]="selectedTopics" groupLabel="Nach Wiki-Thema filtern" />
+  </div>
+
+  @if (hasFilter()) {
+    <button type="button" crsdBtn variant="link" (click)="clearFilters()">Suche und Filter zurücksetzen</button>
+  }
+
+  @switch (results().status) {
+    @case ('loading') {
+      <div class="flex items-center gap-2 text-muted-foreground">
+        <crsd-spinner size="sm" label="Wikis werden geladen" />
+        <span>Wikis werden geladen…</span>
+      </div>
+    }
+    @case ('error') {
+      <div crsdAlert variant="error">
+        <p crsdAlertDescription>Wikis konnten nicht geladen werden. Läuft die API?</p>
+      </div>
+    }
+    @case ('ready') {
+      @if (results().sites.length === 0) {
+        <div crsdEmpty>
+          <p crsdEmptyDescription>
+            @if (hasFilter()) {
+              Keine Wikis entsprechen dieser Suche.
+            } @else {
+              Noch keine Wikis.
+              <a routerLink="/wikis/new" class="text-primary hover:underline">Erstes Wiki anlegen.</a>
+            }
+          </p>
+        </div>
+      } @else {
+        <ul class="grid list-none gap-3 p-0 m-0">
+          @for (site of results().sites; track site.id) {
+            <li>
+              <app-wiki-site-card [site]="site" />
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+</section>

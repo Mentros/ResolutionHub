@@ -1,0 +1,35 @@
+<footer class="mt-4 flex flex-col gap-2.5 border-t border-border/50 pt-3">
+  <div class="flex flex-wrap items-center gap-2">
+    <span crsdBadge variant="outline" color="secondary" size="sm" class="tabular-nums shrink-0">
+      {{ statLabel }}
+    </span>
+    <span class="hidden text-muted-foreground/40 sm:inline" aria-hidden="true">·</span>
+    <time
+      class="text-xs leading-none text-muted-foreground tabular-nums"
+      [attr.datetime]="updatedAt"
+    >
+      Aktualisiert am {{ updatedAt | date: 'mediumDate' }}
+    </time>
+  </div>
+
+  @if (programs.length > 0 || topics.length > 0) {
+    <div class="flex flex-wrap items-center gap-1.5">
+      @if (programs.length > 0) {
+        <app-tag-list
+          class="search-card-chips"
+          [tags]="programs"
+          kind="program"
+          [collapseAfter]="collapseAfter"
+        />
+      }
+      @if (topics.length > 0) {
+        <app-tag-list
+          class="search-card-chips"
+          [tags]="topics"
+          kind="topic"
+          [collapseAfter]="collapseAfter"
+        />
+      }
+    </div>
+  }
+</footer>

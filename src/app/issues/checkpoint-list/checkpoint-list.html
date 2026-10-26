@@ -1,4 +1,4 @@
-<h2 class="text-xl font-semibold">Checkpoints</h2>
+<h2 class="text-xl font-semibold">Schritte</h2>
 @if (error()) {
   <div crsdAlert variant="error">
     <p crsdAlertDescription>{{ error() }}</p>
@@ -28,7 +28,7 @@
               {{ step.sharePath }}
             </code>
             <button type="button" crsdBtn variant="outline" size="sm" (click)="copyPath(step)">
-              {{ copiedId() === step.id ? 'Copied' : 'Copy path' }}
+              {{ copiedId() === step.id ? 'Kopiert' : 'Pfad kopieren' }}
             </button>
           </div>
         }
@@ -36,8 +36,8 @@
     </li>
   } @empty {
     <li class="text-muted-foreground">
-      No checkpoints yet.
-      <a class="text-primary hover:underline" [routerLink]="['/issues', issueId, 'edit']">Add the steps.</a>
+      Noch keine Schritte.
+      <a class="text-primary hover:underline" [routerLink]="['/issues', issueId, 'edit']">Schritte hinzufügen.</a>
     </li>
   }
 </ol>

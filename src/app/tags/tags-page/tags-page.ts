@@ -1,7 +1,13 @@
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { TAGS_URL, TagApi, apiErrorMessage } from '../../core/issue-api';
+import { Component, WritableSignal, inject, signal } from '@angular/core';
+import { Observable } from 'rxjs';
+import {
+  ProgramApi,
+  WikiTopicApi,
+  PROGRAMS_URL,
+  WIKI_TOPICS_URL,
+  apiErrorMessage,
+} from '../../core/labels-api';
 import {
   CrsdAlert,
   CrsdAlertDescription,
@@ -14,8 +20,8 @@ import {
   CrsdLabel,
   CrsdSpinner,
 } from '@mentros/crsd-ui';
+import { BackLink } from '../../core/back-link/back-link';
 import {
-  backLink,
   btnPrimary,
   pageHead,
   pageLede,
@@ -26,12 +32,11 @@ import {
 @Component({
   selector: 'app-tags-page',
   imports: [
-    RouterLink,
+    BackLink,
     CrsdField,
     CrsdLabel,
     CrsdInput,
     CrsdBtn,
-    CrsdCard,
     CrsdSpinner,
     CrsdEmpty,
     CrsdEmptyDescription,
@@ -39,81 +44,142 @@ import {
     CrsdAlertDescription,
   ],
   templateUrl: './tags-page.html',
+  styles: `
+    .labels-scroll {
+      scrollbar-gutter: stable;
+      scrollbar-width: thin;
+    }
+  `,
 })
 export class TagsPage {
-  private readonly api = inject(TagApi);
+  private readonly programApi = inject(ProgramApi);
+  private readonly topicApi = inject(WikiTopicApi);
 
-  readonly draft = signal('');
-  readonly saving = signal(false);
+  readonly programDraft = signal('');
+  readonly topicDraft = signal('');
+  readonly savingProgram = signal(false);
+  readonly savingTopic = signal(false);
   readonly error = signal<string | null>(null);
+  readonly activeTab = signal<'programs' | 'topics'>('programs');
   protected readonly pageSection = pageSection;
   protected readonly pageHead = pageHead;
   protected readonly pageTitle = pageTitle;
   protected readonly pageLede = pageLede;
-  protected readonly backLink = backLink;
   protected readonly btnPrimary = btnPrimary;
 
-  private readonly tagResource = httpResource<string[]>(() => ({ url: TAGS_URL }), {
+  private readonly programResource = httpResource<string[]>(() => ({ url: PROGRAMS_URL }), {
     defaultValue: [] as string[],
   });
 
-  readonly tags = this.tagResource.value;
-  readonly loading = () => {
-    const status = this.tagResource.status();
+  private readonly topicResource = httpResource<string[]>(() => ({ url: WIKI_TOPICS_URL }), {
+    defaultValue: [] as string[],
+  });
+
+  readonly programs = this.programResource.value;
+  readonly topics = this.topicResource.value;
+
+  readonly loadingPrograms = () => {
+    const status = this.programResource.status();
     return status === 'loading' || status === 'reloading';
   };
-  readonly loadError = () => this.tagResource.status() === 'error';
 
-  add(event: Event): void {
+  readonly loadingTopics = () => {
+    const status = this.topicResource.status();
+    return status === 'loading' || status === 'reloading';
+  };
+
+  addProgram(event: Event): void {
     event.preventDefault();
-    if (this.saving()) return;
-    const name = this.draft().trim().replace(/\s+/g, ' ');
-    if (!name) {
-      this.error.set('Enter a tag name.');
-      return;
-    }
-    if (name.includes(',')) {
-      this.error.set('Tag names cannot contain commas.');
-      return;
-    }
-    if (name.length > 40) {
-      this.error.set('Tag names must be 40 characters or fewer.');
-      return;
-    }
+    this.addName(this.programDraft, this.savingProgram, (name) => this.programApi.create(name), () =>
+      this.programResource.reload(),
+    );
+  }
 
-    this.saving.set(true);
+  addTopic(event: Event): void {
+    event.preventDefault();
+    this.addName(this.topicDraft, this.savingTopic, (name) => this.topicApi.create(name), () =>
+      this.topicResource.reload(),
+    );
+  }
+
+  removeProgram(name: string): void {
+    if (this.savingProgram() || this.savingTopic()) return;
+    if (
+      !confirm(
+        `Programm „${name}“ entfernen? Es wird von jedem Vorgang und jeder Wiki-Seite entfernt, die es verwenden.`,
+      )
+    ) {
+      return;
+    }
+    this.savingProgram.set(true);
     this.error.set(null);
-    this.api.createTag(name).subscribe({
+    this.programApi.delete(name).subscribe({
       next: () => {
-        this.draft.set('');
-        this.saving.set(false);
-        this.tagResource.reload();
+        this.savingProgram.set(false);
+        this.programResource.reload();
       },
       error: (err: unknown) => {
-        this.saving.set(false);
-        if (err instanceof HttpErrorResponse && err.status === 409) {
-          this.error.set('A tag with this name already exists.');
-          return;
-        }
-        this.error.set(apiErrorMessage(err, 'Could not add the tag.'));
+        this.savingProgram.set(false);
+        this.error.set(apiErrorMessage(err, 'Das Programm konnte nicht entfernt werden.'));
       },
     });
   }
 
-  remove(name: string): void {
-    if (this.saving()) return;
-    if (!confirm(`Remove the "${name}" tag? It will be taken off every issue that uses it.`)) return;
-
-    this.saving.set(true);
+  removeTopic(name: string): void {
+    if (this.savingProgram() || this.savingTopic()) return;
+    if (!confirm(`Wiki-Thema „${name}“ entfernen? Es wird von jeder Wiki-Seite entfernt, die es verwendet.`)) {
+      return;
+    }
+    this.savingTopic.set(true);
     this.error.set(null);
-    this.api.deleteTag(name).subscribe({
+    this.topicApi.delete(name).subscribe({
       next: () => {
-        this.saving.set(false);
-        this.tagResource.reload();
+        this.savingTopic.set(false);
+        this.topicResource.reload();
       },
       error: (err: unknown) => {
-        this.saving.set(false);
-        this.error.set(apiErrorMessage(err, 'Could not remove the tag.'));
+        this.savingTopic.set(false);
+        this.error.set(apiErrorMessage(err, 'Das Wiki-Thema konnte nicht entfernt werden.'));
+      },
+    });
+  }
+
+  private addName(
+    draft: WritableSignal<string>,
+    saving: WritableSignal<boolean>,
+    create: (name: string) => Observable<{ name: string }>,
+    reload: () => void,
+  ): void {
+    if (saving()) return;
+    const name = draft().trim().replace(/\s+/g, ' ');
+    if (!name) {
+      this.error.set('Gib einen Namen ein.');
+      return;
+    }
+    if (name.includes(',')) {
+      this.error.set('Namen dürfen keine Kommas enthalten.');
+      return;
+    }
+    if (name.length > 40) {
+      this.error.set('Namen dürfen höchstens 40 Zeichen lang sein.');
+      return;
+    }
+
+    saving.set(true);
+    this.error.set(null);
+    create(name).subscribe({
+      next: () => {
+        draft.set('');
+        saving.set(false);
+        reload();
+      },
+      error: (err: unknown) => {
+        saving.set(false);
+        if (err instanceof HttpErrorResponse && err.status === 409) {
+          this.error.set('Dieser Name existiert bereits.');
+          return;
+        }
+        this.error.set(apiErrorMessage(err, 'Der Name konnte nicht hinzugefügt werden.'));
       },
     });
   }

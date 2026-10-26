@@ -16,7 +16,7 @@ export async function writeClipboard(value: string): Promise<void> {
     const copied = document.execCommand('copy');
     area.remove();
     if (!copied) {
-      throw new Error('Copy failed.');
+      throw new Error('Kopieren fehlgeschlagen.');
     }
   }
 }

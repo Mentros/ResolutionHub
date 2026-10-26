@@ -4,14 +4,22 @@ import { fileURLToPath } from 'node:url';
 import {
   HttpError,
   createIssue,
-  createTag,
+  createProgram,
+  createWikiSite,
+  createWikiTopic,
   deleteIssue,
-  deleteTag,
+  deleteProgram,
+  deleteWikiSite,
+  deleteWikiTopic,
   getIssue,
+  getWikiSite,
   initDatabase,
   listIssues,
-  listTags,
+  listPrograms,
+  listWikiSites,
+  listWikiTopics,
   updateIssue,
+  updateWikiSite,
 } from './db';
 
 const port = Number(process.env['PORT'] ?? 3000);
@@ -56,11 +64,22 @@ function readJson(req: IncomingMessage): Promise<unknown> {
       try {
         resolve(JSON.parse(raw) as unknown);
       } catch {
-        reject(new HttpError(400, 'Request body must be JSON.'));
+        reject(new HttpError(400, 'Der Anfrageinhalt muss JSON sein.'));
       }
     });
     req.on('error', reject);
   });
+}
+
+function parseNameList(url: URL, primary: string, alias?: string): string[] {
+  const values = [
+    ...url.searchParams.getAll(primary),
+    ...(alias ? url.searchParams.getAll(alias) : []),
+  ];
+  return values
+    .flatMap((value) => value.split(','))
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
 }
 
 async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
@@ -68,29 +87,41 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const path = url.pathname.replace(/\/+$/, '') || '/';
   const method = req.method ?? 'GET';
 
-  if (path === '/api/tags') {
+  if (path === '/api/programs') {
     if (method === 'GET') {
-      send(res, 200, listTags());
+      send(res, 200, listPrograms());
       return;
     }
     if (method === 'POST') {
-      send(res, 201, createTag(await readJson(req)));
+      send(res, 201, createProgram(await readJson(req)));
       return;
     }
     if (method === 'DELETE') {
-      deleteTag(await readJson(req));
+      deleteProgram(await readJson(req));
+      send(res, 204);
+      return;
+    }
+  }
+
+  if (path === '/api/wiki-topics') {
+    if (method === 'GET') {
+      send(res, 200, listWikiTopics());
+      return;
+    }
+    if (method === 'POST') {
+      send(res, 201, createWikiTopic(await readJson(req)));
+      return;
+    }
+    if (method === 'DELETE') {
+      deleteWikiTopic(await readJson(req));
       send(res, 204);
       return;
     }
   }
 
   if (path === '/api/issues' && method === 'GET') {
-    const tags = url.searchParams
-      .getAll('tags')
-      .flatMap((value) => value.split(','))
-      .map((value) => value.trim())
-      .filter((value) => value.length > 0);
-    send(res, 200, listIssues(url.searchParams.get('q') ?? '', tags));
+    const programs = parseNameList(url, 'programs', 'tags');
+    send(res, 200, listIssues(url.searchParams.get('q') ?? '', programs));
     return;
   }
 
@@ -99,12 +130,44 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     return;
   }
 
+  if (path === '/api/wiki-sites' && method === 'GET') {
+    const programs = parseNameList(url, 'programs');
+    const topics = parseNameList(url, 'topics');
+    send(res, 200, listWikiSites(url.searchParams.get('q') ?? '', programs, topics));
+    return;
+  }
+
+  if (path === '/api/wiki-sites' && method === 'POST') {
+    send(res, 201, createWikiSite(await readJson(req)));
+    return;
+  }
+
+  const wikiMatch = /^\/api\/wiki-sites\/(\d+)$/.exec(path);
+  if (wikiMatch) {
+    const id = Number(wikiMatch[1]);
+    if (method === 'GET') {
+      const site = getWikiSite(id);
+      if (!site) throw new HttpError(404, 'Wiki nicht gefunden.');
+      send(res, 200, site);
+      return;
+    }
+    if (method === 'PUT') {
+      send(res, 200, updateWikiSite(id, await readJson(req)));
+      return;
+    }
+    if (method === 'DELETE') {
+      deleteWikiSite(id);
+      send(res, 204);
+      return;
+    }
+  }
+
   const match = /^\/api\/issues\/(\d+)$/.exec(path);
   if (match) {
     const id = Number(match[1]);
     if (method === 'GET') {
       const issue = getIssue(id);
-      if (!issue) throw new HttpError(404, 'Issue not found.');
+      if (!issue) throw new HttpError(404, 'Vorgang nicht gefunden.');
       send(res, 200, issue);
       return;
     }
@@ -119,7 +182,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     }
   }
 
-  throw new HttpError(404, 'Not found.');
+  throw new HttpError(404, 'Nicht gefunden.');
 }
 
 const server = createServer((req, res) => {

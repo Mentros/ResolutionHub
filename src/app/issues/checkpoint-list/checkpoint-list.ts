@@ -28,7 +28,7 @@ export class CheckpointList {
         if (this.copiedId() === copied) this.copiedId.set(null);
       }, 2000);
     } catch {
-      this.error.set('Could not copy the path. Select it and copy it manually.');
+      this.error.set('Der Pfad konnte nicht kopiert werden. Markiere ihn und kopiere ihn manuell.');
     }
   }
 }

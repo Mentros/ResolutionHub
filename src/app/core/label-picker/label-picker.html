@@ -1,0 +1,37 @@
+<div crsdField>
+  <span crsdLabel [id]="inputId">{{ fieldLabel }}</span>
+  <div class="flex flex-col gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+    @if (selected().length > 0) {
+      <app-removable-label-chips [labels]="selected()" (removeLabel)="removeName($event)" />
+    } @else {
+      <p class="m-0 text-xs text-muted-foreground">Noch nichts ausgewählt.</p>
+    }
+    @if (pickableOptions().length > 0) {
+      <div
+        crsdSelect
+        class="w-full"
+        [attr.aria-labelledby]="inputId"
+        [value]="pickerValue()"
+        (valueChange)="onPick($event)"
+      >
+        <button crsdSelectTrigger type="button">
+          <span crsdSelectPlaceholder class="text-muted-foreground">Hinzufügen</span>
+          <crsd-icon name="chevron-down" class="ml-auto opacity-50" />
+        </button>
+        <ng-template crsdSelectPortal>
+          <ul crsdSelectContent [options]="pickableOptions()"></ul>
+        </ng-template>
+      </div>
+    }
+  </div>
+  <p crsdFieldDescription>
+    Aus der Liste wählen.
+    <a [routerLink]="manageHref" class="text-primary hover:underline">Bezeichnungen verwalten</a>,
+    um neue Namen anzulegen.
+  </p>
+  @if (error()) {
+    <div crsdAlert variant="error">
+      <p crsdAlertDescription>{{ error() }}</p>
+    </div>
+  }
+</div>

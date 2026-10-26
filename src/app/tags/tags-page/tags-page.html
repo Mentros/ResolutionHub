@@ -1,11 +1,11 @@
 <section [class]="pageSection">
-  <a routerLink="/" [class]="backLink">Back to search</a>
+  <app-back-link link="/">Zurück zur Suche</app-back-link>
 
   <header [class]="pageHead">
-    <h1 [class]="pageTitle">Tags</h1>
+    <h1 [class]="pageTitle">Bezeichnungen</h1>
     <p [class]="pageLede">
-      Define tag names here. When you edit an issue, you can only pick from this list, so typos will not
-      create stray tags.
+      Gepflegte Namen für Programme (Teams, Skype, …) und Wiki-Themen (Dokumentation, Fehlercodes, …). Vorgänge und
+      Wiki-Seiten können nur Namen verwenden, die du hier anlegst.
     </p>
   </header>
 
@@ -15,58 +15,162 @@
     </div>
   }
 
-  <form class="flex flex-col gap-4" (submit)="add($event)">
-    <div crsdField>
-      <label crsdLabel for="new-tag">New tag</label>
-      <input
-        id="new-tag"
-        crsdInput
-        [value]="draft()"
-        (valueChange)="draft.set($event)"
-        maxlength="40"
-        placeholder="Teams, Skype, tickets"
-        autocomplete="off"
-        [disabled]="saving()"
-      />
-    </div>
-    <div class="flex flex-wrap gap-2">
-      <button type="submit" [class]="btnPrimary" [disabled]="saving()">
-        {{ saving() ? 'Adding…' : 'Add tag' }}
-      </button>
-    </div>
-  </form>
+  <div
+    role="tablist"
+    aria-label="Bezeichnungsart"
+    class="mb-6 inline-flex w-full max-w-md rounded-lg border border-border bg-muted/30 p-1"
+  >
+    <button
+      type="button"
+      role="tab"
+      crsdBtn
+      class="flex-1"
+      [variant]="activeTab() === 'programs' ? 'solid' : 'ghost'"
+      [color]="activeTab() === 'programs' ? 'primary' : 'secondary'"
+      [attr.aria-selected]="activeTab() === 'programs'"
+      (click)="activeTab.set('programs')"
+    >
+      Programme
+      <span class="ml-1.5 tabular-nums opacity-80">({{ programs().length }})</span>
+    </button>
+    <button
+      type="button"
+      role="tab"
+      crsdBtn
+      class="flex-1"
+      [variant]="activeTab() === 'topics' ? 'solid' : 'ghost'"
+      [color]="activeTab() === 'topics' ? 'primary' : 'secondary'"
+      [attr.aria-selected]="activeTab() === 'topics'"
+      (click)="activeTab.set('topics')"
+    >
+      Wiki-Themen
+      <span class="ml-1.5 tabular-nums opacity-80">({{ topics().length }})</span>
+    </button>
+  </div>
 
-  @if (loading()) {
-    <div class="flex items-center gap-2 text-muted-foreground">
-      <crsd-spinner size="sm" />
-      <span>Loading tags…</span>
-    </div>
-  } @else if (loadError()) {
-    <div crsdAlert variant="error">
-      <p crsdAlertDescription>Could not load tags. Is the API running?</p>
-    </div>
-  } @else if (tags().length === 0) {
-    <div crsdEmpty>
-      <p crsdEmptyDescription>No tags yet. Add the first one above.</p>
-    </div>
-  } @else {
-    <ul class="grid list-none gap-3 p-0 m-0">
-      @for (name of tags(); track name) {
-        <li crsdCard class="flex flex-wrap items-center justify-between gap-3 p-4">
-          <span>{{ name }}</span>
-          <button
-            type="button"
-            crsdBtn
-            variant="outline"
-            size="sm"
-            color="destructive"
-            (click)="remove(name)"
-            [disabled]="saving()"
+  @if (activeTab() === 'programs') {
+    <section aria-labelledby="programs-heading">
+      <h2 id="programs-heading" class="sr-only">Programme</h2>
+      <p class="mb-4 text-sm text-muted-foreground">
+        Werkzeuge und Systeme, die du Vorgängen und Wiki-Seiten zuordnest.
+      </p>
+
+      <form class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end" novalidate (submit)="addProgram($event)">
+        <div crsdField class="min-w-0 flex-1">
+          <label crsdLabel for="new-program">Neues Programm</label>
+          <input
+            id="new-program"
+            crsdInput
+            [value]="programDraft()"
+            (valueChange)="programDraft.set($event)"
+            maxlength="40"
+            placeholder="Teams, Skype, Drucker"
+            autocomplete="off"
+            [disabled]="savingProgram()"
+          />
+        </div>
+        <button type="submit" [class]="btnPrimary" class="shrink-0" [disabled]="savingProgram()">
+          {{ savingProgram() ? 'Wird hinzugefügt…' : 'Hinzufügen' }}
+        </button>
+      </form>
+
+      @if (loadingPrograms()) {
+        <div class="flex items-center gap-2 text-muted-foreground">
+          <crsd-spinner size="sm" />
+          <span>Programme werden geladen…</span>
+        </div>
+      } @else if (programs().length === 0) {
+        <div crsdEmpty class="rounded-lg border border-dashed border-border">
+          <p crsdEmptyDescription>Noch keine Programme.</p>
+        </div>
+      } @else {
+        <div class="overflow-hidden rounded-lg border border-border">
+          <ul
+            class="labels-scroll m-0 max-h-[min(26rem,60vh)] list-none divide-y divide-border overflow-y-auto p-0"
+            aria-label="Programme"
           >
-            Remove
-          </button>
-        </li>
+            @for (name of programs(); track name) {
+              <li class="flex items-center gap-3 bg-background px-3 py-2.5 sm:px-4">
+                <span class="min-w-0 flex-1 truncate text-sm" [attr.title]="name">{{ name }}</span>
+                <button
+                  type="button"
+                  crsdBtn
+                  variant="ghost"
+                  size="sm"
+                  color="destructive"
+                  class="shrink-0"
+                  (click)="removeProgram(name)"
+                  [disabled]="savingProgram()"
+                >
+                  Entfernen
+                </button>
+              </li>
+            }
+          </ul>
+        </div>
       }
-    </ul>
+    </section>
+  } @else {
+    <section aria-labelledby="topics-heading">
+      <h2 id="topics-heading" class="sr-only">Wiki-Themen</h2>
+      <p class="mb-4 text-sm text-muted-foreground">
+        Worum es auf der Wiki-Seite geht, zum Beispiel Dokumentation oder Fehlercodes.
+      </p>
+
+      <form class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end" novalidate (submit)="addTopic($event)">
+        <div crsdField class="min-w-0 flex-1">
+          <label crsdLabel for="new-topic">Neues Wiki-Thema</label>
+          <input
+            id="new-topic"
+            crsdInput
+            [value]="topicDraft()"
+            (valueChange)="topicDraft.set($event)"
+            maxlength="40"
+            placeholder="Dokumentation, Fehlercodes"
+            autocomplete="off"
+            [disabled]="savingTopic()"
+          />
+        </div>
+        <button type="submit" [class]="btnPrimary" class="shrink-0" [disabled]="savingTopic()">
+          {{ savingTopic() ? 'Wird hinzugefügt…' : 'Hinzufügen' }}
+        </button>
+      </form>
+
+      @if (loadingTopics()) {
+        <div class="flex items-center gap-2 text-muted-foreground">
+          <crsd-spinner size="sm" />
+          <span>Wiki-Themen werden geladen…</span>
+        </div>
+      } @else if (topics().length === 0) {
+        <div crsdEmpty class="rounded-lg border border-dashed border-border">
+          <p crsdEmptyDescription>Noch keine Wiki-Themen.</p>
+        </div>
+      } @else {
+        <div class="overflow-hidden rounded-lg border border-border">
+          <ul
+            class="labels-scroll m-0 max-h-[min(26rem,60vh)] list-none divide-y divide-border overflow-y-auto p-0"
+            aria-label="Wiki-Themen"
+          >
+            @for (name of topics(); track name) {
+              <li class="flex items-center gap-3 bg-background px-3 py-2.5 sm:px-4">
+                <span class="min-w-0 flex-1 truncate text-sm" [attr.title]="name">{{ name }}</span>
+                <button
+                  type="button"
+                  crsdBtn
+                  variant="ghost"
+                  size="sm"
+                  color="destructive"
+                  class="shrink-0"
+                  (click)="removeTopic(name)"
+                  [disabled]="savingTopic()"
+                >
+                  Entfernen
+                </button>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </section>
   }
 </section>

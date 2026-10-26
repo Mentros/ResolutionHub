@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -14,9 +13,10 @@ import {
   CrsdEmptyDescription,
   CrsdSpinner,
 } from '@mentros/crsd-ui';
-import { backLink, pageHead, pageLede, pageSection, pageTitle } from '../../core/crsd-ui';
+import { BackLink } from '../../core/back-link/back-link';
+import { DetailRecordMeta } from '../../core/detail-record-meta/detail-record-meta';
+import { pageHead, pageLede, pageSection, pageTitle } from '../../core/crsd-ui';
 import { CheckpointList } from '../checkpoint-list/checkpoint-list';
-import { TagList } from '../tag-list/tag-list';
 
 type DetailState =
   | { status: 'loading'; issue: null }
@@ -28,8 +28,8 @@ type DetailState =
   selector: 'app-issue-detail',
   imports: [
     RouterLink,
-    DatePipe,
-    TagList,
+    BackLink,
+    DetailRecordMeta,
     CheckpointList,
     CrsdBtn,
     CrsdSpinner,
@@ -45,7 +45,6 @@ export class IssueDetail {
   protected readonly pageHead = pageHead;
   protected readonly pageTitle = pageTitle;
   protected readonly pageLede = pageLede;
-  protected readonly backLink = backLink;
   private readonly api = inject(IssueApi);
   private readonly router = inject(Router);
 
@@ -93,9 +92,13 @@ export class IssueDetail {
   readonly deleting = signal(false);
   readonly error = signal<string | null>(null);
 
+  checkpointLabel(count: number): string {
+    return count === 1 ? '1 Schritt' : `${count} Schritte`;
+  }
+
   remove(issue: Issue): void {
     if (this.deleting()) return;
-    if (!confirm('Delete this issue? Its checkpoints will be removed too.')) return;
+    if (!confirm('Diesen Vorgang löschen? Die zugehörigen Schritte werden ebenfalls entfernt.')) return;
     this.deleting.set(true);
     this.error.set(null);
     this.api.deleteIssue(issue.id).subscribe({
@@ -104,7 +107,7 @@ export class IssueDetail {
       },
       error: () => {
         this.deleting.set(false);
-        this.error.set('Could not delete the issue.');
+        this.error.set('Der Vorgang konnte nicht gelöscht werden.');
       },
     });
   }

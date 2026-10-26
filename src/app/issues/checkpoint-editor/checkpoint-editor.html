@@ -1,26 +1,26 @@
 <fieldset class="m-0 flex flex-col gap-4 border-0 p-0">
-  <legend class="text-sm font-medium">Checkpoints</legend>
+  <legend class="text-sm font-medium">Schritte</legend>
   <p crsdFieldDescription>
-    Each step can include what to do, a wiki link, a share-folder path, or any mix of those.
+    Jeder Schritt kann eine Anweisung, einen Wiki-Link, einen Freigabeordner oder eine Kombination davon enthalten.
   </p>
   @for (step of checkpoints(); track step.key; let index = $index, first = $first, last = $last) {
     <div crsdCard class="gap-4 p-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-lg font-semibold">Checkpoint {{ index + 1 }}</h2>
+        <h2 class="text-lg font-semibold">Schritt {{ index + 1 }}</h2>
         <div class="flex flex-wrap gap-2">
           <button type="button" crsdBtn variant="outline" size="sm" (click)="move(step.key, -1)" [disabled]="first">
-            Move up
+            Nach oben
           </button>
           <button type="button" crsdBtn variant="outline" size="sm" (click)="move(step.key, 1)" [disabled]="last">
-            Move down
+            Nach unten
           </button>
           <button type="button" crsdBtn variant="outline" size="sm" color="destructive" (click)="remove(step.key)">
-            Remove
+            Entfernen
           </button>
         </div>
       </div>
       <div crsdField>
-        <label crsdLabel [attr.for]="'checkpoint-instruction-' + step.key">What to do</label>
+        <label crsdLabel [attr.for]="'checkpoint-instruction-' + step.key">Was zu tun ist</label>
         <textarea
           [id]="'checkpoint-instruction-' + step.key"
           crsdTextarea
@@ -31,7 +31,7 @@
         ></textarea>
       </div>
       <div crsdField>
-        <label crsdLabel [attr.for]="'checkpoint-wiki-' + step.key">Wiki link</label>
+        <label crsdLabel [attr.for]="'checkpoint-wiki-' + step.key">Wiki-Link</label>
         <input
           [id]="'checkpoint-wiki-' + step.key"
           type="url"
@@ -42,7 +42,7 @@
         />
       </div>
       <div crsdField>
-        <label crsdLabel [attr.for]="'checkpoint-share-' + step.key">Share folder</label>
+        <label crsdLabel [attr.for]="'checkpoint-share-' + step.key">Freigabeordner</label>
         <input
           [id]="'checkpoint-share-' + step.key"
           crsdInput
@@ -54,5 +54,5 @@
       </div>
     </div>
   }
-  <button type="button" crsdBtn variant="outline" (click)="add()">Add checkpoint</button>
+  <button type="button" crsdBtn variant="outline" (click)="add()">Schritt hinzufügen</button>
 </fieldset>

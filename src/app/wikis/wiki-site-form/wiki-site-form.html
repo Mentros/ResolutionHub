@@ -1,0 +1,80 @@
+<section [class]="pageSection">
+  <app-back-link link="/wikis">Zurück zur Wiki-Suche</app-back-link>
+
+  @if (loading()) {
+    <div class="flex items-center gap-2 text-muted-foreground">
+      <crsd-spinner size="sm" />
+      <span>Wiki wird geladen…</span>
+    </div>
+  } @else if (notFound()) {
+    <div crsdEmpty>
+      <p crsdEmptyDescription>Dieses Wiki ist nicht im Katalog.</p>
+    </div>
+  } @else {
+    <header [class]="pageHead">
+      <h1 [class]="pageTitle">{{ heading() }}</h1>
+      <p [class]="pageLede">
+        Benenne das Wiki, füge die Startadresse ein und speichere Seiten mit den Programmen und Wiki-Themen, die sie abdecken.
+      </p>
+    </header>
+
+    @if (error()) {
+      <div crsdAlert variant="error">
+        <p crsdAlertDescription>{{ error() }}</p>
+      </div>
+    }
+
+    <form class="flex flex-col gap-4" novalidate (submit)="save($event)">
+      <div crsdField>
+        <label crsdLabel for="wiki-name">Name</label>
+        <input
+          id="wiki-name"
+          crsdInput
+          [value]="name()"
+          (valueChange)="name.set($event)"
+          required
+          maxlength="200"
+          autocomplete="off"
+        />
+      </div>
+
+      <div crsdField>
+        <label crsdLabel for="wiki-base-url">Website-URL</label>
+        <input
+          id="wiki-base-url"
+          type="url"
+          crsdInput
+          [value]="baseUrl()"
+          (valueChange)="baseUrl.set($event)"
+          required
+          placeholder="https://learn.microsoft.com/en-us/microsoftteams/"
+        />
+      </div>
+
+      <div crsdField>
+        <label crsdLabel for="wiki-summary">Über dieses Wiki</label>
+        <textarea
+          id="wiki-summary"
+          crsdTextarea
+          rows="3"
+          [value]="summary()"
+          (valueChange)="summary.set($event)"
+          maxlength="5000"
+        ></textarea>
+      </div>
+
+      <app-wiki-entry-editor
+        [entries]="entries"
+        [programCatalog]="programCatalog"
+        [topicCatalog]="topicCatalog"
+      />
+
+      <div class="flex flex-wrap gap-2">
+        <button type="submit" [class]="btnPrimary" [disabled]="saving()">
+          {{ saving() ? 'Wird gespeichert…' : 'Wiki speichern' }}
+        </button>
+        <button type="button" routerLink="/wikis" crsdBtn variant="outline">Abbrechen</button>
+      </div>
+    </form>
+  }
+</section>
