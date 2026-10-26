@@ -25,6 +25,7 @@
     <button type="button" crsdBtn variant="link" (click)="clearFilters()">Suche und Filter zurücksetzen</button>
   }
 
+  <div [class]="pageResults">
   @switch (results().status) {
     @case ('loading') {
       <div class="flex items-center gap-2 text-muted-foreground">
@@ -60,4 +61,5 @@
       }
     }
   }
+  </div>
 </section>

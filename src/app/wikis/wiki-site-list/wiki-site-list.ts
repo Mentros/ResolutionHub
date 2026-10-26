@@ -18,7 +18,7 @@ import {
   CrsdLabel,
   CrsdSpinner,
 } from '@mentros/crsd-ui';
-import { pageHead, pageLede, pageSection, pageTitle } from '../../core/crsd-ui';
+import { pageHead, pageLede, pageResults, pageSection, pageTitle } from '../../core/crsd-ui';
 import { TagFilter } from '../../issues/tag-filter/tag-filter';
 import { WikiSiteCard } from '../wiki-site-card/wiki-site-card';
 
@@ -47,6 +47,7 @@ type ResultState =
 })
 export class WikiSiteList {
   protected readonly pageSection = pageSection;
+  protected readonly pageResults = pageResults;
   protected readonly pageHead = pageHead;
   protected readonly pageTitle = pageTitle;
   protected readonly pageLede = pageLede;

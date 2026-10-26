@@ -11,6 +11,7 @@ export const btnDestructive = cn(
 );
 
 export const pageSection = 'flex flex-col gap-4';
+export const pageResults = 'mt-2 flex flex-col gap-4 border-t border-border pt-6';
 export const pageHead = 'flex flex-col gap-2';
 export const pageTitle = 'text-3xl font-semibold tracking-tight';
 export const pageLede = 'max-w-2xl text-muted-foreground';
