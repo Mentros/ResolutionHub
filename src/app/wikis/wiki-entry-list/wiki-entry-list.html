@@ -1,46 +1,23 @@
-<h2 class="text-xl font-semibold">Seiten</h2>
-<ol class="grid list-none gap-3 p-0 m-0">
+<ul class="m-0 flex list-none flex-col gap-4 p-0">
   @for (entry of entries; track entry.id) {
-    <li crsdCard class="grid grid-cols-[auto_1fr] gap-3 p-4">
-      <span
-        class="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
-      >
-        {{ entry.position + 1 }}
-      </span>
-      <div class="flex flex-col gap-2">
+    <li crsdCard class="gap-3 p-4">
+      <h2 class="text-lg font-semibold">{{ entry.title }}</h2>
+      <p class="text-sm">
         <a
-          class="font-medium text-primary hover:underline"
+          class="break-all text-primary hover:underline"
           [href]="entry.pageUrl"
           target="_blank"
           rel="noopener noreferrer"
         >
-          {{ entry.title }}
+          {{ entry.pageUrl }}
         </a>
-        <p class="break-all text-sm text-muted-foreground">{{ entry.pageUrl }}</p>
-        @if (entry.programs.length > 0 || entry.topics.length > 0) {
-          <div class="flex flex-wrap items-center gap-1.5">
-            @if (entry.programs.length > 0) {
-              <app-tag-list
-                class="search-card-chips"
-                [tags]="entry.programs"
-                kind="program"
-                [collapseAfter]="10"
-              />
-            }
-            @if (entry.topics.length > 0) {
-              <app-tag-list
-                class="search-card-chips"
-                [tags]="entry.topics"
-                kind="topic"
-                [collapseAfter]="10"
-              />
-            }
-          </div>
-        }
-        @if (entry.notes) {
-          <p class="whitespace-pre-wrap text-sm">{{ entry.notes }}</p>
-        }
-      </div>
+      </p>
+      @if (entry.notes) {
+        <p class="text-sm text-muted-foreground">{{ entry.notes }}</p>
+      }
+      @if (entry.tags.length > 0) {
+        <app-tag-list class="search-card-chips" [tags]="entry.tags" kind="program" />
+      }
     </li>
   }
-</ol>
+</ul>

@@ -2,7 +2,7 @@
   <header [class]="pageHead">
     <h1 [class]="pageTitle">Lösung finden</h1>
     <p [class]="pageLede">
-      Suche vergangene Vorgänge danach, was passiert ist, oder grenze sie nach Programm ein, zum Beispiel Teams und Skype.
+      Runbook durchsuchen: vergangene Vorgänge mit Lösungsschritten. Suche im Text oder grenze nach Programm ein, zum Beispiel Teams und Skype.
     </p>
   </header>
 
@@ -19,7 +19,7 @@
     />
   </div>
 
-  <app-tag-filter [tags]="programs" [selected]="selectedPrograms" groupLabel="Nach Programm filtern" />
+  <app-tag-filter [tags]="tagCatalog" [selected]="selectedTags" groupLabel="Nach Bezeichnung filtern" />
 
   @if (hasFilter()) {
     <button type="button" crsdBtn variant="link" (click)="clearFilters()">Suche und Programme zurücksetzen</button>

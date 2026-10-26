@@ -10,7 +10,7 @@ export interface Issue {
   id: number;
   title: string;
   summary: string;
-  programs: string[];
+  tags: string[];
   checkpoints: Checkpoint[];
   createdAt: string;
   updatedAt: string;
@@ -20,7 +20,7 @@ export interface IssueSummary {
   id: number;
   title: string;
   summary: string;
-  programs: string[];
+  tags: string[];
   checkpointCount: number;
   updatedAt: string;
 }
@@ -34,7 +34,7 @@ export interface CheckpointInput {
 export interface IssueInput {
   title: string;
   summary: string;
-  programs: string[];
+  tags: string[];
   checkpoints: CheckpointInput[];
 }
 
@@ -44,8 +44,7 @@ export interface WikiEntry {
   title: string;
   pageUrl: string;
   notes: string;
-  programs: string[];
-  topics: string[];
+  tags: string[];
 }
 
 export interface WikiSite {
@@ -63,8 +62,7 @@ export interface WikiSiteSummary {
   name: string;
   baseUrl: string;
   summary: string;
-  programs: string[];
-  topics: string[];
+  tags: string[];
   entryCount: number;
   updatedAt: string;
 }
@@ -73,8 +71,7 @@ export interface WikiEntryInput {
   title: string;
   pageUrl: string;
   notes: string;
-  programs: string[];
-  topics: string[];
+  tags: string[];
 }
 
 export interface WikiSiteInput {

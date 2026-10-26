@@ -1,7 +1,7 @@
 <fieldset class="m-0 flex flex-col gap-4 border-0 p-0">
   <legend class="text-sm font-medium">Schritte</legend>
   <p crsdFieldDescription>
-    Jeder Schritt kann eine Anweisung, einen Wiki-Link, einen Freigabeordner oder eine Kombination davon enthalten.
+    Die Lösung steht in der Anweisung. Optional: Link zu einer externen Seite (https) oder Pfad zu einem Freigabeordner.
   </p>
   @for (step of checkpoints(); track step.key; let index = $index, first = $first, last = $last) {
     <div crsdCard class="gap-4 p-4">
@@ -31,7 +31,7 @@
         ></textarea>
       </div>
       <div crsdField>
-        <label crsdLabel [attr.for]="'checkpoint-wiki-' + step.key">Wiki-Link</label>
+        <label crsdLabel [attr.for]="'checkpoint-wiki-' + step.key">Externe Dokumentation (URL)</label>
         <input
           [id]="'checkpoint-wiki-' + step.key"
           type="url"

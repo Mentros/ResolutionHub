@@ -1,7 +1,7 @@
 <fieldset class="m-0 flex flex-col gap-4 border-0 p-0">
   <legend class="text-sm font-medium">Seiten</legend>
   <p crsdFieldDescription>
-    Liste die Seiten auf, die du in diesem Wiki brauchst. Programme und Wiki-Themen gelten pro Seite und steuern die Suchfilter.
+    Externe Seiten verlinken. Bezeichnungen pro Seite steuern die Wiki-Suche.
   </p>
   @for (entry of entries(); track entry.key; let index = $index, first = $first, last = $last) {
     <div crsdCard class="gap-4 p-4">
@@ -53,53 +53,26 @@
         ></textarea>
       </div>
       <div crsdField>
-        <span crsdLabel [id]="'wiki-entry-programs-' + entry.key">Programme</span>
+        <span crsdLabel [id]="'wiki-entry-tags-' + entry.key">Bezeichnungen</span>
         <div class="flex flex-col gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
           <app-removable-label-chips
-            [labels]="entry.programs"
-            (removeLabel)="removeLabel(entry.key, 'programs', $event)"
+            [labels]="entry.tags"
+            (removeLabel)="removeTag(entry.key, $event)"
           />
-          @if (programOptions(entry.key).length > 0) {
+          @if (tagOptions(entry.key).length > 0) {
             <div
               crsdSelect
               class="w-full"
-              [attr.aria-labelledby]="'wiki-entry-programs-' + entry.key"
-              [value]="programPickerValue(entry.key)"
-              (valueChange)="onProgramPick(entry.key, $event)"
+              [attr.aria-labelledby]="'wiki-entry-tags-' + entry.key"
+              [value]="tagPickerValue(entry.key)"
+              (valueChange)="onTagPick(entry.key, $event)"
             >
               <button crsdSelectTrigger type="button">
-                <span crsdSelectPlaceholder class="text-muted-foreground">Programm hinzufügen</span>
+                <span crsdSelectPlaceholder class="text-muted-foreground">Bezeichnung hinzufügen</span>
                 <crsd-icon name="chevron-down" class="ml-auto opacity-50" />
               </button>
               <ng-template crsdSelectPortal>
-                <ul crsdSelectContent [options]="programOptions(entry.key)"></ul>
-              </ng-template>
-            </div>
-          }
-        </div>
-      </div>
-      <div crsdField>
-        <span crsdLabel [id]="'wiki-entry-topics-' + entry.key">Wiki-Themen</span>
-        <div class="flex flex-col gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
-          <app-removable-label-chips
-            color="info"
-            [labels]="entry.topics"
-            (removeLabel)="removeLabel(entry.key, 'topics', $event)"
-          />
-          @if (topicOptions(entry.key).length > 0) {
-            <div
-              crsdSelect
-              class="w-full"
-              [attr.aria-labelledby]="'wiki-entry-topics-' + entry.key"
-              [value]="topicPickerValue(entry.key)"
-              (valueChange)="onTopicPick(entry.key, $event)"
-            >
-              <button crsdSelectTrigger type="button">
-                <span crsdSelectPlaceholder class="text-muted-foreground">Wiki-Thema hinzufügen</span>
-                <crsd-icon name="chevron-down" class="ml-auto opacity-50" />
-              </button>
-              <ng-template crsdSelectPortal>
-                <ul crsdSelectContent [options]="topicOptions(entry.key)"></ul>
+                <ul crsdSelectContent [options]="tagOptions(entry.key)"></ul>
               </ng-template>
             </div>
           }

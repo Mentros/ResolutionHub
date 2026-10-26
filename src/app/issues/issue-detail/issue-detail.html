@@ -29,7 +29,7 @@
           <app-detail-record-meta
             [statLabel]="checkpointLabel(issue.checkpoints.length)"
             [updatedAt]="issue.updatedAt"
-            [programs]="issue.programs"
+            [tags]="issue.tags"
           >
             <button type="button" crsdBtn variant="outline" [routerLink]="['/issues', issue.id, 'edit']">
               Bearbeiten

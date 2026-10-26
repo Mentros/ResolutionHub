@@ -5,7 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 import { IssueApi, apiErrorMessage } from '../../core/issue-api';
 import { LabelPicker } from '../../core/label-picker/label-picker';
-import { PROGRAMS_URL } from '../../core/labels-api';
+import { TAGS_URL } from '../../core/labels-api';
 import { IssueInput } from '../../core/models';
 import {
   CrsdAlert,
@@ -57,7 +57,7 @@ export class IssueForm {
   protected readonly btnPrimary = btnPrimary;
   private readonly api = inject(IssueApi);
   private readonly router = inject(Router);
-  private readonly programPicker = viewChild(LabelPicker);
+  private readonly tagPicker = viewChild(LabelPicker);
   private nextKey = 1;
 
   readonly editingId = signal<number | null>(null);
@@ -68,15 +68,15 @@ export class IssueForm {
 
   readonly title = signal('');
   readonly summary = signal('');
-  readonly programs = signal<string[]>([]);
+  readonly tags = signal<string[]>([]);
   readonly checkpoints = signal<CheckpointDraft[]>([this.blankCheckpoint()]);
 
-  private readonly programResource = httpResource<string[]>(() => ({ url: PROGRAMS_URL }), {
+  private readonly tagResource = httpResource<string[]>(() => ({ url: TAGS_URL }), {
     defaultValue: [] as string[],
   });
 
-  readonly knownPrograms = computed(() =>
-    this.programResource.status() === 'error' ? [] : this.programResource.value(),
+  readonly knownTags = computed(() =>
+    this.tagResource.status() === 'error' ? [] : this.tagResource.value(),
   );
 
   constructor() {
@@ -114,7 +114,7 @@ export class IssueForm {
         if (!issue) return;
         this.title.set(issue.title);
         this.summary.set(issue.summary);
-        this.programs.set(issue.programs);
+        this.tags.set(issue.tags);
         this.checkpoints.set(
           issue.checkpoints.length > 0
             ? issue.checkpoints.map((step) => ({
@@ -134,7 +134,7 @@ export class IssueForm {
   save(event: Event): void {
     event.preventDefault();
     if (this.saving()) return;
-    if (this.programPicker()?.commitDraft() === false) return;
+    if (this.tagPicker()?.commitDraft() === false) return;
     const input = this.toInput();
     if (!input) return;
 
@@ -170,7 +170,7 @@ export class IssueForm {
       const sharePath = row.sharePath.trim();
       if (!instruction && !wikiUrl && !sharePath) continue;
       if (wikiUrl && !isHttpUrl(wikiUrl)) {
-        this.error.set('Wiki-Links müssen gültige http- oder https-Adressen sein.');
+        this.error.set('Externe Dokumentation muss eine gültige http- oder https-Adresse sein.');
         return null;
       }
       checkpoints.push({
@@ -182,7 +182,7 @@ export class IssueForm {
     return {
       title,
       summary: this.summary().trim(),
-      programs: this.programs(),
+      tags: this.tags(),
       checkpoints,
     };
   }
@@ -190,7 +190,7 @@ export class IssueForm {
   private reset(): void {
     this.title.set('');
     this.summary.set('');
-    this.programs.set([]);
+    this.tags.set([]);
     this.checkpoints.set([this.blankCheckpoint()]);
   }
 

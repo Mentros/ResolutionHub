@@ -4,20 +4,17 @@ import { fileURLToPath } from 'node:url';
 import {
   HttpError,
   createIssue,
-  createProgram,
+  createTag,
   createWikiSite,
-  createWikiTopic,
   deleteIssue,
-  deleteProgram,
+  deleteTag,
   deleteWikiSite,
-  deleteWikiTopic,
   getIssue,
   getWikiSite,
   initDatabase,
   listIssues,
-  listPrograms,
+  listTags,
   listWikiSites,
-  listWikiTopics,
   updateIssue,
   updateWikiSite,
 } from './db';
@@ -71,11 +68,8 @@ function readJson(req: IncomingMessage): Promise<unknown> {
   });
 }
 
-function parseNameList(url: URL, primary: string, alias?: string): string[] {
-  const values = [
-    ...url.searchParams.getAll(primary),
-    ...(alias ? url.searchParams.getAll(alias) : []),
-  ];
+function parseNameList(url: URL, ...keys: string[]): string[] {
+  const values = keys.flatMap((key) => url.searchParams.getAll(key));
   return values
     .flatMap((value) => value.split(','))
     .map((value) => value.trim())
@@ -87,17 +81,17 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const path = url.pathname.replace(/\/+$/, '') || '/';
   const method = req.method ?? 'GET';
 
-  if (path === '/api/programs') {
+  if (path === '/api/tags' || path === '/api/programs') {
     if (method === 'GET') {
-      send(res, 200, listPrograms());
+      send(res, 200, listTags());
       return;
     }
     if (method === 'POST') {
-      send(res, 201, createProgram(await readJson(req)));
+      send(res, 201, createTag(await readJson(req)));
       return;
     }
     if (method === 'DELETE') {
-      deleteProgram(await readJson(req));
+      deleteTag(await readJson(req));
       send(res, 204);
       return;
     }
@@ -105,23 +99,23 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
 
   if (path === '/api/wiki-topics') {
     if (method === 'GET') {
-      send(res, 200, listWikiTopics());
+      send(res, 200, listTags());
       return;
     }
     if (method === 'POST') {
-      send(res, 201, createWikiTopic(await readJson(req)));
+      send(res, 201, createTag(await readJson(req)));
       return;
     }
     if (method === 'DELETE') {
-      deleteWikiTopic(await readJson(req));
+      deleteTag(await readJson(req));
       send(res, 204);
       return;
     }
   }
 
   if (path === '/api/issues' && method === 'GET') {
-    const programs = parseNameList(url, 'programs', 'tags');
-    send(res, 200, listIssues(url.searchParams.get('q') ?? '', programs));
+    const tags = parseNameList(url, 'tags', 'programs');
+    send(res, 200, listIssues(url.searchParams.get('q') ?? '', tags));
     return;
   }
 
@@ -131,9 +125,8 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   }
 
   if (path === '/api/wiki-sites' && method === 'GET') {
-    const programs = parseNameList(url, 'programs');
-    const topics = parseNameList(url, 'topics');
-    send(res, 200, listWikiSites(url.searchParams.get('q') ?? '', programs, topics));
+    const tags = parseNameList(url, 'tags', 'programs', 'topics');
+    send(res, 200, listWikiSites(url.searchParams.get('q') ?? '', tags));
     return;
   }
 

@@ -10,14 +10,14 @@ import { Issue, IssueInput, IssueSummary } from './models';
 
 export const ISSUES_URL = '/api/issues';
 
-export function issueListRequest(query: string, programs: string[]): HttpResourceRequest {
+export function issueListRequest(query: string, tags: string[]): HttpResourceRequest {
   let params = new HttpParams();
   const trimmed = query.trim();
   if (trimmed) {
     params = params.set('q', trimmed);
   }
-  for (const program of programs) {
-    params = params.append('programs', program);
+  for (const tag of tags) {
+    params = params.append('tags', tag);
   }
   return { url: ISSUES_URL, params };
 }

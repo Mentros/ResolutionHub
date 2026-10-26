@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
 import { issueListRequest } from '../../core/issue-api';
-import { PROGRAMS_URL } from '../../core/labels-api';
+import { TAGS_URL } from '../../core/labels-api';
 import { IssueSearch } from '../../core/issue-search';
 import { IssueSummary } from '../../core/models';
 import {
@@ -51,22 +51,22 @@ export class IssueList {
   protected readonly pageTitle = pageTitle;
   protected readonly pageLede = pageLede;
   readonly search = inject(IssueSearch);
-  readonly selectedPrograms = this.search.programs;
+  readonly selectedTags = this.search.tags;
   readonly draft = signal(this.search.query());
   readonly hasFilter = computed(
-    () => this.search.query().trim().length > 0 || this.selectedPrograms().length > 0,
+    () => this.search.query().trim().length > 0 || this.selectedTags().length > 0,
   );
 
   private readonly queryChanges = new Subject<string>();
 
-  private readonly programResource = httpResource<string[]>(() => ({ url: PROGRAMS_URL }), {
+  private readonly tagResource = httpResource<string[]>(() => ({ url: TAGS_URL }), {
     defaultValue: [] as string[],
   });
 
-  readonly programs = computed(() => catalogValue(this.programResource));
+  readonly tagCatalog = computed(() => catalogValue(this.tagResource));
 
   private readonly issueResource = httpResource<IssueSummary[]>(
-    () => issueListRequest(this.search.query(), this.search.programs()),
+    () => issueListRequest(this.search.query(), this.search.tags()),
     { defaultValue: [] as IssueSummary[] },
   );
 
@@ -86,7 +86,7 @@ export class IssueList {
   clearFilters(): void {
     this.draft.set('');
     this.search.query.set('');
-    this.selectedPrograms.set([]);
+    this.selectedTags.set([]);
   }
 }
 

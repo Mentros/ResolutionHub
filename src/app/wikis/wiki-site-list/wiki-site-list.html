@@ -2,7 +2,7 @@
   <header [class]="pageHead">
     <h1 [class]="pageTitle">Wiki finden</h1>
     <p [class]="pageLede">
-      Suche gespeicherte Wikis nach Name oder Notizen. Filtere nach Programmen und Wiki-Themen, die einzelnen Seiten zugeordnet sind.
+      Lesezeichen für externe Dokumentation (kein Runbook). Suche nach Name oder Notizen; filtere nach Programmen und Wiki-Themen pro Seite.
     </p>
   </header>
 
@@ -19,10 +19,7 @@
     />
   </div>
 
-  <div class="flex flex-col gap-3">
-    <app-tag-filter [tags]="programs" [selected]="selectedPrograms" groupLabel="Nach Programm filtern" />
-    <app-tag-filter [tags]="topics" [selected]="selectedTopics" groupLabel="Nach Wiki-Thema filtern" />
-  </div>
+  <app-tag-filter [tags]="tagCatalog" [selected]="selectedTags" groupLabel="Nach Bezeichnung filtern" />
 
   @if (hasFilter()) {
     <button type="button" crsdBtn variant="link" (click)="clearFilters()">Suche und Filter zurücksetzen</button>
@@ -48,7 +45,7 @@
               Keine Wikis entsprechen dieser Suche.
             } @else {
               Noch keine Wikis.
-              <a routerLink="/wikis/new" class="text-primary hover:underline">Erstes Wiki anlegen.</a>
+              <a routerLink="/wikis/new" class="text-primary hover:underline">Erste externe Dokumentation indexieren.</a>
             }
           </p>
         </div>

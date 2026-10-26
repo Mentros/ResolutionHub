@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, distinctUntilChanged, map, of, switchMap } from 'rxjs';
 import { apiErrorMessage } from '../../core/issue-api';
-import { PROGRAMS_URL, WIKI_TOPICS_URL } from '../../core/labels-api';
+import { TAGS_URL } from '../../core/labels-api';
 import { WikiSiteInput } from '../../core/models';
 import { WikiSiteApi } from '../../core/wiki-api';
 import {
@@ -69,20 +69,12 @@ export class WikiSiteForm {
   readonly summary = signal('');
   readonly entries = signal<WikiEntryDraft[]>([this.blankEntry()]);
 
-  private readonly programResource = httpResource<string[]>(() => ({ url: PROGRAMS_URL }), {
+  private readonly tagResource = httpResource<string[]>(() => ({ url: TAGS_URL }), {
     defaultValue: [] as string[],
   });
 
-  private readonly topicResource = httpResource<string[]>(() => ({ url: WIKI_TOPICS_URL }), {
-    defaultValue: [] as string[],
-  });
-
-  readonly programCatalog = computed(() =>
-    this.programResource.status() === 'error' ? [] : this.programResource.value(),
-  );
-
-  readonly topicCatalog = computed(() =>
-    this.topicResource.status() === 'error' ? [] : this.topicResource.value(),
+  readonly tagCatalog = computed(() =>
+    this.tagResource.status() === 'error' ? [] : this.tagResource.value(),
   );
 
   constructor() {
@@ -128,8 +120,7 @@ export class WikiSiteForm {
                 title: entry.title,
                 pageUrl: entry.pageUrl,
                 notes: entry.notes,
-                programs: entry.programs,
-                topics: entry.topics,
+                tags: entry.tags,
               }))
             : [this.blankEntry()],
         );
@@ -176,7 +167,7 @@ export class WikiSiteForm {
       const title = row.title.trim();
       const pageUrl = row.pageUrl.trim();
       const notes = row.notes.trim();
-      if (!title && !pageUrl && !notes && row.programs.length === 0 && row.topics.length === 0) {
+      if (!title && !pageUrl && !notes && row.tags.length === 0) {
         continue;
       }
       if (!title) {
@@ -191,8 +182,7 @@ export class WikiSiteForm {
         title,
         pageUrl,
         notes,
-        programs: row.programs,
-        topics: row.topics,
+        tags: row.tags,
       });
     }
     return {
@@ -211,7 +201,7 @@ export class WikiSiteForm {
   }
 
   private blankEntry(): WikiEntryDraft {
-    return { key: this.nextKey++, title: '', pageUrl: '', notes: '', programs: [], topics: [] };
+    return { key: this.nextKey++, title: '', pageUrl: '', notes: '', tags: [] };
   }
 }
 

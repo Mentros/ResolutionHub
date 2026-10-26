@@ -12,24 +12,7 @@
     </time>
   </div>
 
-  @if (programs.length > 0 || topics.length > 0) {
-    <div class="flex flex-wrap items-center gap-1.5">
-      @if (programs.length > 0) {
-        <app-tag-list
-          class="search-card-chips"
-          [tags]="programs"
-          kind="program"
-          [collapseAfter]="collapseAfter"
-        />
-      }
-      @if (topics.length > 0) {
-        <app-tag-list
-          class="search-card-chips"
-          [tags]="topics"
-          kind="topic"
-          [collapseAfter]="collapseAfter"
-        />
-      }
-    </div>
+  @if (tags.length > 0) {
+    <app-tag-list class="search-card-chips" [tags]="tags" kind="program" [collapseAfter]="collapseAfter" />
   }
 </footer>

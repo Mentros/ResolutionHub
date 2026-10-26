@@ -2,6 +2,8 @@ import { mkdirSync } from 'node:fs';
 import { DatabaseSync, type SQLOutputValue } from 'node:sqlite';
 import { dirname } from 'node:path';
 
+const SCHEMA_VERSION = 3;
+
 export class HttpError extends Error {
   constructor(
     readonly status: number,
@@ -23,7 +25,7 @@ export interface Issue {
   id: number;
   title: string;
   summary: string;
-  programs: string[];
+  tags: string[];
   checkpoints: Checkpoint[];
   createdAt: string;
   updatedAt: string;
@@ -33,7 +35,7 @@ export interface IssueSummary {
   id: number;
   title: string;
   summary: string;
-  programs: string[];
+  tags: string[];
   checkpointCount: number;
   updatedAt: string;
 }
@@ -44,8 +46,7 @@ export interface WikiEntry {
   title: string;
   pageUrl: string;
   notes: string;
-  programs: string[];
-  topics: string[];
+  tags: string[];
 }
 
 export interface WikiSite {
@@ -63,8 +64,7 @@ export interface WikiSiteSummary {
   name: string;
   baseUrl: string;
   summary: string;
-  programs: string[];
-  topics: string[];
+  tags: string[];
   entryCount: number;
   updatedAt: string;
 }
@@ -78,7 +78,7 @@ interface CheckpointInput {
 interface IssueInput {
   title: string;
   summary: string;
-  programs: string[];
+  tags: string[];
   checkpoints: CheckpointInput[];
 }
 
@@ -86,8 +86,7 @@ interface WikiEntryInput {
   title: string;
   pageUrl: string;
   notes: string;
-  programs: string[];
-  topics: string[];
+  tags: string[];
 }
 
 interface WikiSiteInput {
@@ -96,6 +95,9 @@ interface WikiSiteInput {
   summary: string;
   entries: WikiEntryInput[];
 }
+
+type StoredCheckpoint = CheckpointInput;
+type StoredWikiEntry = WikiEntryInput;
 
 let database: DatabaseSync | null = null;
 
@@ -106,43 +108,84 @@ export function initDatabase(dbPath: string): void {
     timeout: 5000,
   });
   db.exec('PRAGMA journal_mode = WAL;');
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS issues (
-      id INTEGER PRIMARY KEY,
-      title TEXT NOT NULL,
-      summary TEXT NOT NULL DEFAULT '',
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
+  database = db;
 
-    CREATE TABLE IF NOT EXISTS programs (
+  const version = schemaVersion();
+  if (version < SCHEMA_VERSION) {
+    migrateToV3();
+    setSchemaVersion(SCHEMA_VERSION);
+  } else {
+    ensureSchemaV3();
+  }
+
+  seedIfEmpty();
+  seedWikiSitesIfEmpty();
+}
+
+function db(): DatabaseSync {
+  if (!database) {
+    throw new Error('Database is not open.');
+  }
+  return database;
+}
+
+function schemaVersion(): number {
+  const row = db().prepare('PRAGMA user_version').get() as { user_version?: number } | undefined;
+  return num(row?.['user_version']);
+}
+
+function setSchemaVersion(version: number): void {
+  db().exec(`PRAGMA user_version = ${version}`);
+}
+
+function tableExists(name: string): boolean {
+  const row = db()
+    .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`)
+    .get(name);
+  return row != null;
+}
+
+function ensureSchemaV3(): void {
+  db().exec(`
+    CREATE TABLE IF NOT EXISTS tags (
       id INTEGER PRIMARY KEY,
       name TEXT NOT NULL COLLATE NOCASE UNIQUE
     );
 
-    CREATE TABLE IF NOT EXISTS issue_programs (
-      issue_id INTEGER NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
-      program_id INTEGER NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
-      PRIMARY KEY (issue_id, program_id)
-    );
-
-    CREATE TABLE IF NOT EXISTS checkpoints (
+    CREATE TABLE IF NOT EXISTS issues (
       id INTEGER PRIMARY KEY,
-      issue_id INTEGER NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
-      position INTEGER NOT NULL,
-      instruction TEXT NOT NULL DEFAULT '',
-      wiki_url TEXT,
-      share_path TEXT,
-      UNIQUE (issue_id, position),
-      CHECK (
-        length(trim(instruction)) > 0
-        OR length(trim(coalesce(wiki_url, ''))) > 0
-        OR length(trim(coalesce(share_path, ''))) > 0
-      )
+      title TEXT NOT NULL,
+      summary TEXT NOT NULL DEFAULT '',
+      checkpoints_json TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
     );
 
-    CREATE INDEX IF NOT EXISTS idx_issue_programs_program ON issue_programs(program_id);
-    CREATE INDEX IF NOT EXISTS idx_checkpoints_issue ON checkpoints(issue_id, position);
+    CREATE TABLE IF NOT EXISTS issue_tags (
+      issue_id INTEGER NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
+      tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+      PRIMARY KEY (issue_id, tag_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_issue_tags_tag ON issue_tags(tag_id);
+
+    CREATE TABLE IF NOT EXISTS wiki_sites (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      base_url TEXT NOT NULL,
+      summary TEXT NOT NULL DEFAULT '',
+      entries_json TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS wiki_tags (
+      wiki_site_id INTEGER NOT NULL REFERENCES wiki_sites(id) ON DELETE CASCADE,
+      tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+      PRIMARY KEY (wiki_site_id, tag_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_wiki_tags_tag ON wiki_tags(tag_id);
 
     CREATE VIRTUAL TABLE IF NOT EXISTS issue_search USING fts5(
       title,
@@ -150,51 +193,6 @@ export function initDatabase(dbPath: string): void {
       tag_names,
       checkpoint_text,
       tokenize = "unicode61 remove_diacritics 2"
-    );
-
-    CREATE TABLE IF NOT EXISTS wiki_sites (
-      id INTEGER PRIMARY KEY,
-      name TEXT NOT NULL,
-      base_url TEXT NOT NULL,
-      summary TEXT NOT NULL DEFAULT '',
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS wiki_topics (
-      id INTEGER PRIMARY KEY,
-      name TEXT NOT NULL COLLATE NOCASE UNIQUE
-    );
-
-    CREATE TABLE IF NOT EXISTS wiki_entries (
-      id INTEGER PRIMARY KEY,
-      wiki_site_id INTEGER NOT NULL REFERENCES wiki_sites(id) ON DELETE CASCADE,
-      position INTEGER NOT NULL,
-      title TEXT NOT NULL,
-      page_url TEXT NOT NULL,
-      notes TEXT NOT NULL DEFAULT '',
-      UNIQUE (wiki_site_id, position)
-    );
-
-    CREATE TABLE IF NOT EXISTS wiki_entry_programs (
-      wiki_entry_id INTEGER NOT NULL REFERENCES wiki_entries(id) ON DELETE CASCADE,
-      program_id INTEGER NOT NULL REFERENCES programs(id) ON DELETE CASCADE,
-      PRIMARY KEY (wiki_entry_id, program_id)
-    );
-
-    CREATE TABLE IF NOT EXISTS wiki_entry_topics (
-      wiki_entry_id INTEGER NOT NULL REFERENCES wiki_entries(id) ON DELETE CASCADE,
-      topic_id INTEGER NOT NULL REFERENCES wiki_topics(id) ON DELETE CASCADE,
-      PRIMARY KEY (wiki_entry_id, topic_id)
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_wiki_entry_programs_program ON wiki_entry_programs(program_id);
-    CREATE INDEX IF NOT EXISTS idx_wiki_entry_topics_topic ON wiki_entry_topics(topic_id);
-    CREATE INDEX IF NOT EXISTS idx_wiki_entries_site ON wiki_entries(wiki_site_id, position);
-
-    CREATE TABLE IF NOT EXISTS app_meta (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
     );
 
     CREATE VIRTUAL TABLE IF NOT EXISTS wiki_site_search USING fts5(
@@ -205,18 +203,181 @@ export function initDatabase(dbPath: string): void {
       tokenize = "unicode61 remove_diacritics 2"
     );
   `);
-  database = db;
-  migrateLegacyLabelsIfNeeded();
-  seedWikiTopicsIfEmpty();
-  seedIfEmpty();
-  seedWikiSitesIfEmpty();
 }
 
-function db(): DatabaseSync {
-  if (!database) {
-    throw new Error('Database is not open.');
+function dropLegacyTables(): void {
+  const connection = db();
+  const drops = [
+    'issue_tags_old',
+    'checkpoints',
+    'issue_programs',
+    'issue_tags_legacy',
+    'wiki_entries',
+    'wiki_entry_programs',
+    'wiki_entry_topics',
+    'programs',
+    'wiki_topics',
+    'tags_legacy',
+    'app_meta',
+  ];
+  for (const name of drops) {
+    connection.exec(`DROP TABLE IF EXISTS ${name}`);
   }
-  return database;
+  if (tableExists('issue_search')) {
+    connection.exec('DROP TABLE issue_search');
+  }
+  if (tableExists('wiki_site_search')) {
+    connection.exec('DROP TABLE wiki_site_search');
+  }
+}
+
+function migrateToV3(): void {
+  if (!tableExists('issues') && !tableExists('programs') && !tableExists('tags')) {
+    ensureSchemaV3();
+    return;
+  }
+
+  transaction(() => {
+    const connection = db();
+    ensureSchemaV3();
+
+    if (tableExists('programs')) {
+      connection.exec(`INSERT OR IGNORE INTO tags (id, name) SELECT id, name FROM programs`);
+    }
+    if (tableExists('wiki_topics')) {
+      connection.exec(`
+        INSERT OR IGNORE INTO tags (name)
+        SELECT name FROM wiki_topics
+        WHERE NOT EXISTS (SELECT 1 FROM tags t WHERE t.name = wiki_topics.name COLLATE NOCASE)
+      `);
+    }
+
+    if (!columnExists('issues', 'checkpoints_json')) {
+      connection.exec(`ALTER TABLE issues ADD COLUMN checkpoints_json TEXT NOT NULL DEFAULT '[]'`);
+    }
+    if (tableExists('checkpoints')) {
+      const issues = connection.prepare('SELECT id FROM issues').all();
+      const readSteps = connection.prepare(
+        `SELECT instruction, wiki_url AS wikiUrl, share_path AS sharePath
+         FROM checkpoints WHERE issue_id = ? ORDER BY position ASC, id ASC`,
+      );
+      const update = connection.prepare('UPDATE issues SET checkpoints_json = ? WHERE id = ?');
+      for (const row of issues) {
+        const issueId = num(row['id']);
+        const steps = readSteps.all(issueId).map((step) => ({
+          instruction: text(step['instruction']),
+          wikiUrl: nullableText(step['wikiUrl']),
+          sharePath: nullableText(step['sharePath']),
+        }));
+        update.run(JSON.stringify(steps), issueId);
+      }
+    }
+
+    if (tableExists('issue_programs')) {
+      connection.prepare('DELETE FROM issue_tags').run();
+      connection.exec(`
+        INSERT OR IGNORE INTO issue_tags (issue_id, tag_id)
+        SELECT ip.issue_id, t.id
+        FROM issue_programs ip
+        JOIN tags t ON t.id = ip.program_id
+      `);
+    }
+
+    if (!columnExists('wiki_sites', 'entries_json')) {
+      connection.exec(`ALTER TABLE wiki_sites ADD COLUMN entries_json TEXT NOT NULL DEFAULT '[]'`);
+    }
+    if (tableExists('wiki_entries')) {
+      const sites = connection.prepare('SELECT id FROM wiki_sites').all();
+      const readEntries = connection.prepare(
+        `SELECT id, position, title, page_url AS pageUrl, notes
+         FROM wiki_entries WHERE wiki_site_id = ? ORDER BY position ASC, id ASC`,
+      );
+      const readPrograms = connection.prepare(
+        `SELECT t.name FROM tags t
+         JOIN wiki_entry_programs wep ON wep.program_id = t.id
+         WHERE wep.wiki_entry_id = ? ORDER BY t.name COLLATE NOCASE`,
+      );
+      const readTopics = tableExists('wiki_topics')
+        ? connection.prepare(
+            `SELECT wt.name FROM wiki_topics wt
+             JOIN wiki_entry_topics wet ON wet.topic_id = wt.id
+             WHERE wet.wiki_entry_id = ? ORDER BY wt.name COLLATE NOCASE`,
+          )
+        : null;
+      const updateSite = connection.prepare('UPDATE wiki_sites SET entries_json = ? WHERE id = ?');
+      for (const siteRow of sites) {
+        const siteId = num(siteRow['id']);
+        const entryRows = readEntries.all(siteId);
+        const stored: StoredWikiEntry[] = [];
+        for (const entry of entryRows) {
+          const entryId = num(entry['id']);
+          const programNames = tableExists('wiki_entry_programs')
+            ? readPrograms.all(entryId).map((r) => text(r['name']))
+            : [];
+          const topicNames = readTopics
+            ? readTopics.all(entryId).map((r) => text(r['name']))
+            : [];
+          stored.push({
+            title: text(entry['title']),
+            pageUrl: text(entry['pageUrl']),
+            notes: text(entry['notes']),
+            tags: mergeTagNames(programNames, topicNames),
+          });
+        }
+        updateSite.run(JSON.stringify(stored), siteId);
+      }
+    }
+
+    connection.exec(`
+      CREATE TABLE IF NOT EXISTS wiki_tags (
+        wiki_site_id INTEGER NOT NULL REFERENCES wiki_sites(id) ON DELETE CASCADE,
+        tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+        PRIMARY KEY (wiki_site_id, tag_id)
+      );
+    `);
+    connection.prepare('DELETE FROM wiki_tags').run();
+    const wikiSites = connection.prepare('SELECT id, entries_json FROM wiki_sites').all();
+    for (const row of wikiSites) {
+      syncWikiTagsFromJson(num(row['id']), text(row['entries_json']));
+    }
+
+    dropLegacyTables();
+    ensureSchemaV3();
+
+    const issueIds = connection
+      .prepare('SELECT id FROM issues')
+      .all()
+      .map((row) => num(row['id']));
+    for (const issueId of issueIds) {
+      rebuildSearch(issueId);
+    }
+    const wikiSiteIds = connection
+      .prepare('SELECT id FROM wiki_sites')
+      .all()
+      .map((row) => num(row['id']));
+    for (const wikiSiteId of wikiSiteIds) {
+      rebuildWikiSearch(wikiSiteId);
+    }
+  });
+}
+
+function columnExists(table: string, column: string): boolean {
+  const rows = db().prepare(`PRAGMA table_info(${table})`).all();
+  return rows.some((row) => text(row['name']) === column);
+}
+
+function mergeTagNames(...lists: string[][]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const list of lists) {
+    for (const name of list) {
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(name);
+    }
+  }
+  return out;
 }
 
 function transaction<T>(fn: () => T): T {
@@ -261,7 +422,7 @@ function optionalText(value: unknown, label: string, max: number): string {
 function normalizeUrl(value: unknown): string | null {
   if (value == null) return null;
   if (typeof value !== 'string') {
-    throw new HttpError(400, 'Wiki-Links müssen Text sein.');
+    throw new HttpError(400, 'Externe Dokumentation muss Text sein.');
   }
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -269,10 +430,10 @@ function normalizeUrl(value: unknown): string | null {
   try {
     url = new URL(trimmed);
   } catch {
-    throw new HttpError(400, 'Wiki-Links müssen gültige http- oder https-Adressen sein.');
+    throw new HttpError(400, 'Externe Dokumentation muss eine gültige http- oder https-Adresse sein.');
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new HttpError(400, 'Wiki-Links müssen gültige http- oder https-Adressen sein.');
+    throw new HttpError(400, 'Externe Dokumentation muss eine gültige http- oder https-Adresse sein.');
   }
   return url.toString();
 }
@@ -304,6 +465,81 @@ function normalizeLabelNames(value: unknown, label: string): string[] {
   return names;
 }
 
+function parseTagsField(record: Record<string, unknown>, label: string): string[] {
+  if (record['tags'] != null) {
+    return normalizeLabelNames(record['tags'], label);
+  }
+  const programs = normalizeLabelNames(record['programs'], label);
+  const topics = normalizeLabelNames(record['topics'], label);
+  return mergeTagNames(programs, topics);
+}
+
+function parseCheckpointsJson(raw: string): StoredCheckpoint[] {
+  if (!raw) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  const out: StoredCheckpoint[] = [];
+  for (const step of parsed) {
+    if (!step || typeof step !== 'object' || Array.isArray(step)) continue;
+    const fields = step as Record<string, unknown>;
+    const instruction = optionalText(fields['instruction'], 'Schrittanweisung', 5000);
+    const wikiUrl = normalizeUrl(fields['wikiUrl']);
+    const sharePath = optionalText(fields['sharePath'], 'Freigabepfad', 500) || null;
+    if (!instruction && !wikiUrl && !sharePath) continue;
+    out.push({ instruction, wikiUrl, sharePath });
+  }
+  return out;
+}
+
+function parseEntriesJson(raw: string): StoredWikiEntry[] {
+  if (!raw) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+  const out: StoredWikiEntry[] = [];
+  for (const entry of parsed) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+    const fields = entry as Record<string, unknown>;
+    out.push({
+      title: optionalText(fields['title'], 'Seitentitel', 200),
+      pageUrl: normalizeUrl(fields['pageUrl']) ?? '',
+      notes: optionalText(fields['notes'], 'Seitennotiz', 5000),
+      tags: parseTagsField(fields, 'Bezeichnungen'),
+    });
+  }
+  return out;
+}
+
+function toCheckpoints(stored: StoredCheckpoint[]): Checkpoint[] {
+  return stored.map((step, position) => ({
+    id: position + 1,
+    position,
+    instruction: step.instruction,
+    wikiUrl: step.wikiUrl,
+    sharePath: step.sharePath,
+  }));
+}
+
+function toWikiEntries(stored: StoredWikiEntry[]): WikiEntry[] {
+  return stored.map((entry, position) => ({
+    id: position + 1,
+    position,
+    title: entry.title,
+    pageUrl: entry.pageUrl,
+    notes: entry.notes,
+    tags: entry.tags,
+  }));
+}
+
 function parseIssueInput(body: unknown): IssueInput {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new HttpError(400, 'Der Vorgang muss ein Objekt sein.');
@@ -314,8 +550,7 @@ function parseIssueInput(body: unknown): IssueInput {
     throw new HttpError(400, 'Der Titel ist erforderlich.');
   }
   const summary = optionalText(record['summary'], 'Zusammenfassung', 5000);
-  const programsRaw = record['programs'] ?? record['tags'];
-  const programs = normalizeLabelNames(programsRaw, 'Programme');
+  const tags = parseTagsField(record, 'Bezeichnungen');
   if (!Array.isArray(record['checkpoints']) && record['checkpoints'] != null) {
     throw new HttpError(400, 'Schritte müssen eine Liste sein.');
   }
@@ -332,44 +567,31 @@ function parseIssueInput(body: unknown): IssueInput {
     if (!instruction && !wikiUrl && !sharePath) continue;
     checkpoints.push({ instruction, wikiUrl, sharePath });
   }
-  return { title, summary, programs, checkpoints };
+  return { title, summary, tags, checkpoints };
 }
 
-function readIssuePrograms(issueId: number): string[] {
+function readIssueTags(issueId: number): string[] {
   const rows = db()
     .prepare(
-      `SELECT p.name AS name
-       FROM programs p
-       JOIN issue_programs ip ON ip.program_id = p.id
-       WHERE ip.issue_id = ?
-       ORDER BY p.name COLLATE NOCASE`,
+      `SELECT t.name AS name
+       FROM tags t
+       JOIN issue_tags it ON it.tag_id = t.id
+       WHERE it.issue_id = ?
+       ORDER BY t.name COLLATE NOCASE`,
     )
     .all(issueId);
   return rows.map((row) => text(row['name']));
 }
 
-function readCheckpoints(issueId: number): Checkpoint[] {
-  const rows = db()
-    .prepare(
-      `SELECT id, position, instruction, wiki_url AS wikiUrl, share_path AS sharePath
-       FROM checkpoints
-       WHERE issue_id = ?
-       ORDER BY position ASC, id ASC`,
-    )
-    .all(issueId);
-  return rows.map((row) => ({
-    id: num(row['id']),
-    position: num(row['position']),
-    instruction: text(row['instruction']),
-    wikiUrl: nullableText(row['wikiUrl']),
-    sharePath: nullableText(row['sharePath']),
-  }));
+function readCheckpointsFromRow(checkpointsJson: string): Checkpoint[] {
+  return toCheckpoints(parseCheckpointsJson(checkpointsJson));
 }
 
 export function getIssue(id: number): Issue | null {
   const row = db()
     .prepare(
-      `SELECT id, title, summary, created_at AS createdAt, updated_at AS updatedAt
+      `SELECT id, title, summary, checkpoints_json AS checkpointsJson,
+              created_at AS createdAt, updated_at AS updatedAt
        FROM issues WHERE id = ?`,
     )
     .get(id);
@@ -379,37 +601,36 @@ export function getIssue(id: number): Issue | null {
     id: issueId,
     title: text(row['title']),
     summary: text(row['summary']),
-    programs: readIssuePrograms(issueId),
-    checkpoints: readCheckpoints(issueId),
+    tags: readIssueTags(issueId),
+    checkpoints: readCheckpointsFromRow(text(row['checkpointsJson'])),
     createdAt: text(row['createdAt']),
     updatedAt: text(row['updatedAt']),
   };
 }
 
-function replaceIssuePrograms(issueId: number, programs: string[]): void {
+function replaceIssueTags(issueId: number, tags: string[]): void {
   const connection = db();
-  connection.prepare('DELETE FROM issue_programs WHERE issue_id = ?').run(issueId);
-  const findProgram = connection.prepare('SELECT id FROM programs WHERE name = ?');
-  const link = connection.prepare('INSERT INTO issue_programs (issue_id, program_id) VALUES (?, ?)');
-  for (const name of programs) {
-    const program = findProgram.get(name);
-    if (!program) {
-      throw new HttpError(400, `Unbekanntes Programm „${name}“. Lege es zuerst unter Bezeichnungen an.`);
+  connection.prepare('DELETE FROM issue_tags WHERE issue_id = ?').run(issueId);
+  const findTag = connection.prepare('SELECT id FROM tags WHERE name = ?');
+  const link = connection.prepare('INSERT INTO issue_tags (issue_id, tag_id) VALUES (?, ?)');
+  for (const name of tags) {
+    const tag = findTag.get(name);
+    if (!tag) {
+      throw new HttpError(400, `Unbekannte Bezeichnung „${name}“. Lege sie zuerst unter Bezeichnungen an.`);
     }
-    link.run(issueId, num(program['id']));
+    link.run(issueId, num(tag['id']));
   }
 }
 
 function replaceCheckpoints(issueId: number, checkpoints: CheckpointInput[]): void {
-  const connection = db();
-  connection.prepare('DELETE FROM checkpoints WHERE issue_id = ?').run(issueId);
-  const insert = connection.prepare(
-    `INSERT INTO checkpoints (issue_id, position, instruction, wiki_url, share_path)
-     VALUES (?, ?, ?, ?, ?)`,
-  );
-  checkpoints.forEach((step, position) => {
-    insert.run(issueId, position, step.instruction, step.wikiUrl, step.sharePath);
-  });
+  const stored: StoredCheckpoint[] = checkpoints.map((step) => ({
+    instruction: step.instruction,
+    wikiUrl: step.wikiUrl,
+    sharePath: step.sharePath,
+  }));
+  db()
+    .prepare('UPDATE issues SET checkpoints_json = ? WHERE id = ?')
+    .run(JSON.stringify(stored), issueId);
 }
 
 function rebuildSearch(issueId: number): void {
@@ -425,20 +646,24 @@ function rebuildSearch(issueId: number): void {
       `INSERT INTO issue_search (rowid, title, summary, tag_names, checkpoint_text)
        VALUES (?, ?, ?, ?, ?)`,
     )
-    .run(issueId, issue.title, issue.summary, issue.programs.join(' '), checkpointText);
+    .run(issueId, issue.title, issue.summary, issue.tags.join(' '), checkpointText);
 }
 
 function insertIssue(input: IssueInput, timestamp: string): Issue {
   return transaction(() => {
+    const stored: StoredCheckpoint[] = input.checkpoints.map((step) => ({
+      instruction: step.instruction,
+      wikiUrl: step.wikiUrl,
+      sharePath: step.sharePath,
+    }));
     const result = db()
       .prepare(
-        `INSERT INTO issues (title, summary, created_at, updated_at)
-         VALUES (?, ?, ?, ?)`,
+        `INSERT INTO issues (title, summary, checkpoints_json, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .run(input.title, input.summary, timestamp, timestamp);
+      .run(input.title, input.summary, JSON.stringify(stored), timestamp, timestamp);
     const id = Number(result.lastInsertRowid);
-    replaceIssuePrograms(id, input.programs);
-    replaceCheckpoints(id, input.checkpoints);
+    replaceIssueTags(id, input.tags);
     rebuildSearch(id);
     const issue = getIssue(id);
     if (!issue) {
@@ -459,11 +684,15 @@ export function updateIssue(id: number, body: unknown): Issue {
     if (!existing) {
       throw new HttpError(404, 'Vorgang nicht gefunden.');
     }
+    const stored: StoredCheckpoint[] = input.checkpoints.map((step) => ({
+      instruction: step.instruction,
+      wikiUrl: step.wikiUrl,
+      sharePath: step.sharePath,
+    }));
     db()
-      .prepare('UPDATE issues SET title = ?, summary = ?, updated_at = ? WHERE id = ?')
-      .run(input.title, input.summary, new Date().toISOString(), id);
-    replaceIssuePrograms(id, input.programs);
-    replaceCheckpoints(id, input.checkpoints);
+      .prepare('UPDATE issues SET title = ?, summary = ?, checkpoints_json = ?, updated_at = ? WHERE id = ?')
+      .run(input.title, input.summary, JSON.stringify(stored), new Date().toISOString(), id);
+    replaceIssueTags(id, input.tags);
     rebuildSearch(id);
     const issue = getIssue(id);
     if (!issue) {
@@ -510,160 +739,84 @@ function parseWikiSiteInput(body: unknown): WikiSiteInput {
     const title = optionalText(fields['title'], 'Seitentitel', 200);
     const pageUrl = normalizeUrl(fields['pageUrl']);
     const notes = optionalText(fields['notes'], 'Seitennotiz', 5000);
-    if (!title && !pageUrl && !notes) continue;
+    const tags = parseTagsField(fields, 'Bezeichnungen');
+    if (!title && !pageUrl && !notes && tags.length === 0) continue;
     if (!title) {
       throw new HttpError(400, 'Jede Seite braucht einen Titel.');
     }
     if (!pageUrl) {
       throw new HttpError(400, 'Jede Seite braucht eine gültige http- oder https-Adresse.');
     }
-    const programs = normalizeLabelNames(fields['programs'], 'Programme');
-    const topics = normalizeLabelNames(fields['topics'], 'Wiki-Themen');
-    entries.push({ title, pageUrl, notes, programs, topics });
+    entries.push({ title, pageUrl, notes, tags });
   }
   return { name, baseUrl, summary, entries };
 }
 
-function readEntryPrograms(entryId: number): string[] {
-  const rows = db()
-    .prepare(
-      `SELECT p.name AS name
-       FROM programs p
-       JOIN wiki_entry_programs wep ON wep.program_id = p.id
-       WHERE wep.wiki_entry_id = ?
-       ORDER BY p.name COLLATE NOCASE`,
-    )
-    .all(entryId);
-  return rows.map((row) => text(row['name']));
-}
-
-function readEntryTopics(entryId: number): string[] {
+function readWikiSiteTags(wikiSiteId: number): string[] {
   const rows = db()
     .prepare(
       `SELECT t.name AS name
-       FROM wiki_topics t
-       JOIN wiki_entry_topics wet ON wet.topic_id = t.id
-       WHERE wet.wiki_entry_id = ?
-       ORDER BY t.name COLLATE NOCASE`,
-    )
-    .all(entryId);
-  return rows.map((row) => text(row['name']));
-}
-
-function readWikiSitePrograms(wikiSiteId: number): string[] {
-  const rows = db()
-    .prepare(
-      `SELECT DISTINCT p.name AS name
-       FROM programs p
-       JOIN wiki_entry_programs wep ON wep.program_id = p.id
-       JOIN wiki_entries e ON e.id = wep.wiki_entry_id
-       WHERE e.wiki_site_id = ?
-       ORDER BY p.name COLLATE NOCASE`,
-    )
-    .all(wikiSiteId);
-  return rows.map((row) => text(row['name']));
-}
-
-function readWikiSiteTopics(wikiSiteId: number): string[] {
-  const rows = db()
-    .prepare(
-      `SELECT DISTINCT t.name AS name
-       FROM wiki_topics t
-       JOIN wiki_entry_topics wet ON wet.topic_id = t.id
-       JOIN wiki_entries e ON e.id = wet.wiki_entry_id
-       WHERE e.wiki_site_id = ?
+       FROM tags t
+       JOIN wiki_tags wt ON wt.tag_id = t.id
+       WHERE wt.wiki_site_id = ?
        ORDER BY t.name COLLATE NOCASE`,
     )
     .all(wikiSiteId);
   return rows.map((row) => text(row['name']));
 }
 
-function readWikiEntries(wikiSiteId: number): WikiEntry[] {
-  const rows = db()
-    .prepare(
-      `SELECT id, position, title, page_url AS pageUrl, notes
-       FROM wiki_entries
-       WHERE wiki_site_id = ?
-       ORDER BY position ASC, id ASC`,
-    )
-    .all(wikiSiteId);
-  return rows.map((row) => {
-    const entryId = num(row['id']);
-    return {
-      id: entryId,
-      position: num(row['position']),
-      title: text(row['title']),
-      pageUrl: text(row['pageUrl']),
-      notes: text(row['notes']),
-      programs: readEntryPrograms(entryId),
-      topics: readEntryTopics(entryId),
-    };
-  });
+function readWikiEntriesFromRow(entriesJson: string): WikiEntry[] {
+  return toWikiEntries(parseEntriesJson(entriesJson));
+}
+
+function validateEntryTags(entries: WikiEntryInput[]): void {
+  const findTag = db().prepare('SELECT id FROM tags WHERE name = ?');
+  for (const entry of entries) {
+    for (const name of entry.tags) {
+      const tag = findTag.get(name);
+      if (!tag) {
+        throw new HttpError(400, `Unbekannte Bezeichnung „${name}“. Lege sie zuerst unter Bezeichnungen an.`);
+      }
+    }
+  }
+}
+
+function syncWikiTagsFromJson(wikiSiteId: number, entriesJson: string): void {
+  const connection = db();
+  connection.prepare('DELETE FROM wiki_tags WHERE wiki_site_id = ?').run(wikiSiteId);
+  const entries = parseEntriesJson(entriesJson);
+  const names = mergeTagNames(...entries.map((e) => e.tags));
+  const findTag = connection.prepare('SELECT id FROM tags WHERE name = ?');
+  const link = connection.prepare('INSERT OR IGNORE INTO wiki_tags (wiki_site_id, tag_id) VALUES (?, ?)');
+  for (const name of names) {
+    const tag = findTag.get(name);
+    if (!tag) continue;
+    link.run(wikiSiteId, num(tag['id']));
+  }
+}
+
+function syncWikiTagsFromEntries(wikiSiteId: number, entries: WikiEntryInput[]): void {
+  syncWikiTagsFromJson(wikiSiteId, JSON.stringify(entries));
 }
 
 export function getWikiSite(id: number): WikiSite | null {
   const row = db()
     .prepare(
-      `SELECT id, name, base_url AS baseUrl, summary, created_at AS createdAt, updated_at AS updatedAt
+      `SELECT id, name, base_url AS baseUrl, summary, entries_json AS entriesJson,
+              created_at AS createdAt, updated_at AS updatedAt
        FROM wiki_sites WHERE id = ?`,
     )
     .get(id);
   if (!row) return null;
-  const wikiSiteId = num(row['id']);
   return {
-    id: wikiSiteId,
+    id: num(row['id']),
     name: text(row['name']),
     baseUrl: text(row['baseUrl']),
     summary: text(row['summary']),
-    entries: readWikiEntries(wikiSiteId),
+    entries: readWikiEntriesFromRow(text(row['entriesJson'])),
     createdAt: text(row['createdAt']),
     updatedAt: text(row['updatedAt']),
   };
-}
-
-function linkEntryPrograms(entryId: number, programs: string[]): void {
-  const connection = db();
-  const findProgram = connection.prepare('SELECT id FROM programs WHERE name = ?');
-  const link = connection.prepare(
-    'INSERT INTO wiki_entry_programs (wiki_entry_id, program_id) VALUES (?, ?)',
-  );
-  for (const name of programs) {
-    const program = findProgram.get(name);
-    if (!program) {
-      throw new HttpError(400, `Unbekanntes Programm „${name}“. Lege es zuerst unter Bezeichnungen an.`);
-    }
-    link.run(entryId, num(program['id']));
-  }
-}
-
-function linkEntryTopics(entryId: number, topics: string[]): void {
-  const connection = db();
-  const findTopic = connection.prepare('SELECT id FROM wiki_topics WHERE name = ?');
-  const link = connection.prepare(
-    'INSERT INTO wiki_entry_topics (wiki_entry_id, topic_id) VALUES (?, ?)',
-  );
-  for (const name of topics) {
-    const topic = findTopic.get(name);
-    if (!topic) {
-      throw new HttpError(400, `Unbekanntes Wiki-Thema „${name}“. Lege es zuerst unter Bezeichnungen an.`);
-    }
-    link.run(entryId, num(topic['id']));
-  }
-}
-
-function replaceWikiEntries(wikiSiteId: number, entries: WikiEntryInput[]): void {
-  const connection = db();
-  connection.prepare('DELETE FROM wiki_entries WHERE wiki_site_id = ?').run(wikiSiteId);
-  const insert = connection.prepare(
-    `INSERT INTO wiki_entries (wiki_site_id, position, title, page_url, notes)
-     VALUES (?, ?, ?, ?, ?)`,
-  );
-  entries.forEach((entry, position) => {
-    const result = insert.run(wikiSiteId, position, entry.title, entry.pageUrl, entry.notes);
-    const entryId = Number(result.lastInsertRowid);
-    linkEntryPrograms(entryId, entry.programs);
-    linkEntryTopics(entryId, entry.topics);
-  });
 }
 
 function rebuildWikiSearch(wikiSiteId: number): void {
@@ -671,15 +824,10 @@ function rebuildWikiSearch(wikiSiteId: number): void {
   const connection = db();
   connection.prepare('DELETE FROM wiki_site_search WHERE rowid = ?').run(wikiSiteId);
   if (!site) return;
-  const labelNames = [
-    ...readWikiSitePrograms(wikiSiteId),
-    ...readWikiSiteTopics(wikiSiteId),
-  ].join(' ');
+  const labelNames = readWikiSiteTags(wikiSiteId).join(' ');
   const entryText = site.entries
     .map((entry) =>
-      [entry.title, entry.pageUrl, entry.notes, ...entry.programs, ...entry.topics]
-        .filter(Boolean)
-        .join(' '),
+      [entry.title, entry.pageUrl, entry.notes, ...entry.tags].filter(Boolean).join(' '),
     )
     .join('\n');
   connection
@@ -691,15 +839,16 @@ function rebuildWikiSearch(wikiSiteId: number): void {
 }
 
 function insertWikiSite(input: WikiSiteInput, timestamp: string): WikiSite {
+  validateEntryTags(input.entries);
   return transaction(() => {
     const result = db()
       .prepare(
-        `INSERT INTO wiki_sites (name, base_url, summary, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO wiki_sites (name, base_url, summary, entries_json, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .run(input.name, input.baseUrl, input.summary, timestamp, timestamp);
+      .run(input.name, input.baseUrl, input.summary, JSON.stringify(input.entries), timestamp, timestamp);
     const id = Number(result.lastInsertRowid);
-    replaceWikiEntries(id, input.entries);
+    syncWikiTagsFromEntries(id, input.entries);
     rebuildWikiSearch(id);
     const site = getWikiSite(id);
     if (!site) {
@@ -715,15 +864,18 @@ export function createWikiSite(body: unknown): WikiSite {
 
 export function updateWikiSite(id: number, body: unknown): WikiSite {
   const input = parseWikiSiteInput(body);
+  validateEntryTags(input.entries);
   return transaction(() => {
     const existing = getWikiSite(id);
     if (!existing) {
       throw new HttpError(404, 'Wiki nicht gefunden.');
     }
     db()
-      .prepare('UPDATE wiki_sites SET name = ?, base_url = ?, summary = ?, updated_at = ? WHERE id = ?')
-      .run(input.name, input.baseUrl, input.summary, new Date().toISOString(), id);
-    replaceWikiEntries(id, input.entries);
+      .prepare(
+        'UPDATE wiki_sites SET name = ?, base_url = ?, summary = ?, entries_json = ?, updated_at = ? WHERE id = ?',
+      )
+      .run(input.name, input.baseUrl, input.summary, JSON.stringify(input.entries), new Date().toISOString(), id);
+    syncWikiTagsFromEntries(id, input.entries);
     rebuildWikiSearch(id);
     const site = getWikiSite(id);
     if (!site) {
@@ -743,14 +895,13 @@ export function deleteWikiSite(id: number): void {
   });
 }
 
-export function listWikiSites(query: string, programs: string[], topics: string[]): WikiSiteSummary[] {
+export function listWikiSites(query: string, tags: string[]): WikiSiteSummary[] {
   const trimmedQuery = query.trim();
   if (trimmedQuery.length > 200) {
     throw new HttpError(400, 'Der Suchtext ist zu lang.');
   }
   const fts = toFtsQuery(trimmedQuery);
-  const selectedPrograms = uniqueLabelNames(programs);
-  const selectedTopics = uniqueLabelNames(topics);
+  const selectedTags = uniqueLabelNames(tags);
   const where: string[] = [];
   const params: Array<string | number> = [];
 
@@ -758,35 +909,16 @@ export function listWikiSites(query: string, programs: string[], topics: string[
     where.push('w.id IN (SELECT rowid FROM wiki_site_search WHERE wiki_site_search MATCH ?)');
     params.push(fts);
   }
-  if (selectedPrograms.length > 0) {
-    const placeholders = selectedPrograms.map(() => '?').join(', ');
+  for (const tagName of selectedTags) {
     where.push(
       `w.id IN (
-        SELECT e.wiki_site_id
-        FROM wiki_entries e
-        JOIN wiki_entry_programs wep ON wep.wiki_entry_id = e.id
-        JOIN programs p ON p.id = wep.program_id
-        WHERE p.name IN (${placeholders})
-        GROUP BY e.wiki_site_id
-        HAVING COUNT(DISTINCT p.id) = ?
+        SELECT wt.wiki_site_id
+        FROM wiki_tags wt
+        JOIN tags t ON t.id = wt.tag_id
+        WHERE t.name = ?
       )`,
     );
-    params.push(...selectedPrograms, selectedPrograms.length);
-  }
-  if (selectedTopics.length > 0) {
-    const placeholders = selectedTopics.map(() => '?').join(', ');
-    where.push(
-      `w.id IN (
-        SELECT e.wiki_site_id
-        FROM wiki_entries e
-        JOIN wiki_entry_topics wet ON wet.wiki_entry_id = e.id
-        JOIN wiki_topics t ON t.id = wet.topic_id
-        WHERE t.name IN (${placeholders})
-        GROUP BY e.wiki_site_id
-        HAVING COUNT(DISTINCT t.id) = ?
-      )`,
-    );
-    params.push(...selectedTopics, selectedTopics.length);
+    params.push(tagName);
   }
 
   const sql = `
@@ -796,7 +928,7 @@ export function listWikiSites(query: string, programs: string[], topics: string[
       w.base_url AS baseUrl,
       w.summary,
       w.updated_at AS updatedAt,
-      (SELECT COUNT(*) FROM wiki_entries e WHERE e.wiki_site_id = w.id) AS entryCount
+      json_array_length(w.entries_json) AS entryCount
     FROM wiki_sites w
     ${where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''}
     ORDER BY w.updated_at DESC, w.id DESC
@@ -820,8 +952,7 @@ export function listWikiSites(query: string, programs: string[], topics: string[
       name: text(row['name']),
       baseUrl: text(row['baseUrl']),
       summary: text(row['summary']),
-      programs: readWikiSitePrograms(id),
-      topics: readWikiSiteTopics(id),
+      tags: readWikiSiteTags(id),
       entryCount: num(row['entryCount']),
       updatedAt: text(row['updatedAt']),
     };
@@ -852,13 +983,13 @@ function uniqueLabelNames(names: string[]): string[] {
   return unique;
 }
 
-export function listIssues(query: string, programs: string[]): IssueSummary[] {
+export function listIssues(query: string, tags: string[]): IssueSummary[] {
   const trimmedQuery = query.trim();
   if (trimmedQuery.length > 200) {
     throw new HttpError(400, 'Der Suchtext ist zu lang.');
   }
   const fts = toFtsQuery(trimmedQuery);
-  const selectedPrograms = uniqueLabelNames(programs);
+  const selectedTags = uniqueLabelNames(tags);
   const where: string[] = [];
   const params: Array<string | number> = [];
 
@@ -866,19 +997,19 @@ export function listIssues(query: string, programs: string[]): IssueSummary[] {
     where.push('i.id IN (SELECT rowid FROM issue_search WHERE issue_search MATCH ?)');
     params.push(fts);
   }
-  if (selectedPrograms.length > 0) {
-    const placeholders = selectedPrograms.map(() => '?').join(', ');
+  if (selectedTags.length > 0) {
+    const placeholders = selectedTags.map(() => '?').join(', ');
     where.push(
       `i.id IN (
-        SELECT ip.issue_id
-        FROM issue_programs ip
-        JOIN programs p ON p.id = ip.program_id
-        WHERE p.name IN (${placeholders})
-        GROUP BY ip.issue_id
-        HAVING COUNT(DISTINCT p.id) = ?
+        SELECT it.issue_id
+        FROM issue_tags it
+        JOIN tags t ON t.id = it.tag_id
+        WHERE t.name IN (${placeholders})
+        GROUP BY it.issue_id
+        HAVING COUNT(DISTINCT t.id) = ?
       )`,
     );
-    params.push(...selectedPrograms, selectedPrograms.length);
+    params.push(...selectedTags, selectedTags.length);
   }
 
   const sql = `
@@ -887,7 +1018,7 @@ export function listIssues(query: string, programs: string[]): IssueSummary[] {
       i.title,
       i.summary,
       i.updated_at AS updatedAt,
-      (SELECT COUNT(*) FROM checkpoints c WHERE c.issue_id = i.id) AS checkpointCount
+      i.checkpoints_json AS checkpointsJson
     FROM issues i
     ${where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''}
     ORDER BY i.updated_at DESC, i.id DESC
@@ -910,23 +1041,16 @@ export function listIssues(query: string, programs: string[]): IssueSummary[] {
       id,
       title: text(row['title']),
       summary: text(row['summary']),
-      programs: readIssuePrograms(id),
-      checkpointCount: num(row['checkpointCount']),
+      tags: readIssueTags(id),
+      checkpointCount: parseCheckpointsJson(text(row['checkpointsJson'])).length,
       updatedAt: text(row['updatedAt']),
     };
   });
 }
 
-export function listPrograms(): string[] {
+export function listTags(): string[] {
   return db()
-    .prepare('SELECT name FROM programs ORDER BY name COLLATE NOCASE')
-    .all()
-    .map((row) => text(row['name']));
-}
-
-export function listWikiTopics(): string[] {
-  return db()
-    .prepare('SELECT name FROM wiki_topics ORDER BY name COLLATE NOCASE')
+    .prepare('SELECT name FROM tags ORDER BY name COLLATE NOCASE')
     .all()
     .map((row) => text(row['name']));
 }
@@ -946,174 +1070,59 @@ function parseLabelName(body: unknown, label: string): string {
   return names[0];
 }
 
-export function createProgram(body: unknown): { name: string } {
-  const name = parseLabelName(body, 'Programm');
+export function createTag(body: unknown): { name: string } {
+  const name = parseLabelName(body, 'Bezeichnung');
   const connection = db();
-  const existing = connection.prepare('SELECT id FROM programs WHERE name = ?').get(name);
+  const existing = connection.prepare('SELECT id FROM tags WHERE name = ?').get(name);
   if (existing) {
-    throw new HttpError(409, 'Ein Programm mit diesem Namen existiert bereits.');
+    throw new HttpError(409, 'Eine Bezeichnung mit diesem Namen existiert bereits.');
   }
-  connection.prepare('INSERT INTO programs (name) VALUES (?)').run(name);
+  connection.prepare('INSERT INTO tags (name) VALUES (?)').run(name);
   return { name };
 }
 
-export function createWikiTopic(body: unknown): { name: string } {
-  const name = parseLabelName(body, 'Wiki-Thema');
-  const connection = db();
-  const existing = connection.prepare('SELECT id FROM wiki_topics WHERE name = ?').get(name);
-  if (existing) {
-    throw new HttpError(409, 'Ein Wiki-Thema mit diesem Namen existiert bereits.');
-  }
-  connection.prepare('INSERT INTO wiki_topics (name) VALUES (?)').run(name);
-  return { name };
-}
-
-export function deleteProgram(body: unknown): void {
-  const name = parseLabelName(body, 'Programm');
+export function deleteTag(body: unknown): void {
+  const name = parseLabelName(body, 'Bezeichnung');
   transaction(() => {
     const connection = db();
-    const program = connection.prepare('SELECT id FROM programs WHERE name = ?').get(name);
-    if (!program) {
-      throw new HttpError(404, 'Programm nicht gefunden.');
+    const tag = connection.prepare('SELECT id FROM tags WHERE name = ?').get(name);
+    if (!tag) {
+      throw new HttpError(404, 'Bezeichnung nicht gefunden.');
     }
-    const programId = num(program['id']);
+    const tagId = num(tag['id']);
     const issueIds = connection
-      .prepare('SELECT issue_id FROM issue_programs WHERE program_id = ?')
-      .all(programId)
+      .prepare('SELECT issue_id FROM issue_tags WHERE tag_id = ?')
+      .all(tagId)
       .map((row) => num(row['issue_id']));
     const wikiSiteIds = connection
-      .prepare(
-        `SELECT DISTINCT e.wiki_site_id AS wikiSiteId
-         FROM wiki_entries e
-         JOIN wiki_entry_programs wep ON wep.wiki_entry_id = e.id
-         WHERE wep.program_id = ?`,
-      )
-      .all(programId)
-      .map((row) => num(row['wikiSiteId']));
-    connection.prepare('DELETE FROM programs WHERE id = ?').run(programId);
+      .prepare('SELECT wiki_site_id FROM wiki_tags WHERE tag_id = ?')
+      .all(tagId)
+      .map((row) => num(row['wiki_site_id']));
+    connection.prepare('DELETE FROM tags WHERE id = ?').run(tagId);
+
     for (const issueId of issueIds) {
       rebuildSearch(issueId);
     }
     for (const wikiSiteId of wikiSiteIds) {
+      const site = getWikiSite(wikiSiteId);
+      if (!site) continue;
+      const entries = site.entries.map((entry) => ({
+        title: entry.title,
+        pageUrl: entry.pageUrl,
+        notes: entry.notes,
+        tags: entry.tags.filter((t) => t.toLowerCase() !== name.toLowerCase()),
+      }));
+      connection
+        .prepare('UPDATE wiki_sites SET entries_json = ? WHERE id = ?')
+        .run(JSON.stringify(entries), wikiSiteId);
+      syncWikiTagsFromEntries(wikiSiteId, entries);
       rebuildWikiSearch(wikiSiteId);
     }
   });
 }
 
-export function deleteWikiTopic(body: unknown): void {
-  const name = parseLabelName(body, 'Wiki-Thema');
-  transaction(() => {
-    const connection = db();
-    const topic = connection.prepare('SELECT id FROM wiki_topics WHERE name = ?').get(name);
-    if (!topic) {
-      throw new HttpError(404, 'Wiki-Thema nicht gefunden.');
-    }
-    const topicId = num(topic['id']);
-    const wikiSiteIds = connection
-      .prepare(
-        `SELECT DISTINCT e.wiki_site_id AS wikiSiteId
-         FROM wiki_entries e
-         JOIN wiki_entry_topics wet ON wet.wiki_entry_id = e.id
-         WHERE wet.topic_id = ?`,
-      )
-      .all(topicId)
-      .map((row) => num(row['wikiSiteId']));
-    connection.prepare('DELETE FROM wiki_topics WHERE id = ?').run(topicId);
-    for (const wikiSiteId of wikiSiteIds) {
-      rebuildWikiSearch(wikiSiteId);
-    }
-  });
-}
-
-function tableExists(name: string): boolean {
-  const row = db()
-    .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`)
-    .get(name);
-  return row != null;
-}
-
-function migrateLegacyLabelsIfNeeded(): void {
-  const done = db().prepare(`SELECT value FROM app_meta WHERE key = 'labels_v2'`).get();
-  if (done) return;
-
-  if (!tableExists('tags')) {
-    db().prepare(`INSERT INTO app_meta (key, value) VALUES ('labels_v2', '1')`).run();
-    return;
-  }
-
-  transaction(() => {
-    const connection = db();
-    connection.exec(`
-      INSERT OR IGNORE INTO programs (id, name)
-      SELECT id, name FROM tags;
-    `);
-    connection.exec(`
-      INSERT OR IGNORE INTO issue_programs (issue_id, program_id)
-      SELECT issue_id, tag_id FROM issue_tags;
-    `);
-
-    if (tableExists('wiki_site_tags')) {
-      const siteTags = connection
-        .prepare(
-          `SELECT wst.wiki_site_id AS wikiSiteId, t.name AS name
-           FROM wiki_site_tags wst
-           JOIN tags t ON t.id = wst.tag_id`,
-        )
-        .all();
-      const entriesBySite = connection.prepare(
-        `SELECT id FROM wiki_entries WHERE wiki_site_id = ?`,
-      );
-      const ensureProgram = connection.prepare('SELECT id FROM programs WHERE name = ?');
-      const linkProgram = connection.prepare(
-        'INSERT OR IGNORE INTO wiki_entry_programs (wiki_entry_id, program_id) VALUES (?, ?)',
-      );
-      for (const row of siteTags) {
-        const wikiSiteId = num(row['wikiSiteId']);
-        const programName = text(row['name']);
-        const program = ensureProgram.get(programName);
-        if (!program) continue;
-        const programId = num(program['id']);
-        const entries = entriesBySite.all(wikiSiteId);
-        for (const entry of entries) {
-          linkProgram.run(num(entry['id']), programId);
-        }
-      }
-    }
-
-    connection.exec('DROP TABLE IF EXISTS issue_tags');
-    connection.exec('DROP TABLE IF EXISTS wiki_site_tags');
-    connection.exec('DROP TABLE IF EXISTS tags');
-
-    connection.prepare(`INSERT INTO app_meta (key, value) VALUES ('labels_v2', '1')`).run();
-  });
-
-  const issueIds = db()
-    .prepare('SELECT id FROM issues')
-    .all()
-    .map((row) => num(row['id']));
-  for (const issueId of issueIds) {
-    rebuildSearch(issueId);
-  }
-  const wikiSiteIds = db()
-    .prepare('SELECT id FROM wiki_sites')
-    .all()
-    .map((row) => num(row['id']));
-  for (const wikiSiteId of wikiSiteIds) {
-    rebuildWikiSearch(wikiSiteId);
-  }
-}
-
-function seedWikiTopicsIfEmpty(): void {
-  const row = db().prepare('SELECT COUNT(*) AS count FROM wiki_topics').get();
-  if (num(row?.['count']) > 0) return;
-  const insert = db().prepare('INSERT INTO wiki_topics (name) VALUES (?)');
-  for (const name of ['documentation', 'error codes']) {
-    insert.run(name);
-  }
-}
-
-function ensurePrograms(names: string[]): void {
-  const insert = db().prepare('INSERT OR IGNORE INTO programs (name) VALUES (?)');
+function ensureTags(names: string[]): void {
+  const insert = db().prepare('INSERT OR IGNORE INTO tags (name) VALUES (?)');
   for (const name of names) {
     insert.run(name);
   }
@@ -1123,14 +1132,14 @@ function seedIfEmpty(): void {
   const row = db().prepare('SELECT COUNT(*) AS count FROM issues').get();
   if (num(row?.['count']) > 0) return;
 
-  ensurePrograms(['Teams', 'tickets', 'Skype']);
+  ensureTags(['Teams', 'tickets', 'Skype', 'documentation', 'error codes']);
 
   insertIssue(
     {
       title: 'Teams meeting will not join',
       summary:
         'Desktop client stays on "Joining meeting". Chat and the ticket both point at the company network. The web client is the workaround, then a cache reset if the desktop app is still stuck.',
-      programs: ['Teams', 'tickets'],
+      tags: ['Teams', 'tickets'],
       checkpoints: [
         {
           instruction:
@@ -1160,7 +1169,7 @@ function seedIfEmpty(): void {
       title: 'Skype stays offline after sign-in',
       summary:
         'Messages still send, but presence never leaves Offline. It is usually a stuck local profile, and sometimes the old Skype client is still running in the tray.',
-      programs: ['Skype'],
+      tags: ['Skype'],
       checkpoints: [
         {
           instruction:
@@ -1184,7 +1193,7 @@ function seedWikiSitesIfEmpty(): void {
   const row = db().prepare('SELECT COUNT(*) AS count FROM wiki_sites').get();
   if (num(row?.['count']) > 0) return;
 
-  ensurePrograms(['Teams', 'Microsoft', 'Skype']);
+  ensureTags(['Teams', 'Microsoft', 'Skype']);
 
   insertWikiSite(
     {
@@ -1198,16 +1207,14 @@ function seedWikiSitesIfEmpty(): void {
           pageUrl:
             'https://learn.microsoft.com/en-us/microsoftteams/troubleshoot/meetings/troubleshoot-meetings',
           notes: 'Join failures, audio, and screen sharing on the desktop app.',
-          programs: ['Teams', 'Microsoft'],
-          topics: ['documentation'],
+          tags: ['Teams', 'Microsoft', 'documentation'],
         },
         {
           title: 'Clear Teams cache',
           pageUrl:
             'https://learn.microsoft.com/en-us/microsoftteams/troubleshoot/teams-sign-in/sign-in-loop',
           notes: 'Sign-in loops and stale profiles after an upgrade.',
-          programs: ['Teams'],
-          topics: ['documentation', 'error codes'],
+          tags: ['Teams', 'documentation', 'error codes'],
         },
       ],
     },
@@ -1224,8 +1231,7 @@ function seedWikiSitesIfEmpty(): void {
           title: 'Skype help home',
           pageUrl: 'https://support.microsoft.com/en-us/skype/skype-help',
           notes: 'Start here for sign-in and presence problems.',
-          programs: ['Skype', 'Microsoft'],
-          topics: ['documentation'],
+          tags: ['Skype', 'Microsoft', 'documentation'],
         },
       ],
     },

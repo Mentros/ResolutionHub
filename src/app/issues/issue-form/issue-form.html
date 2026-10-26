@@ -14,7 +14,7 @@
     <header [class]="pageHead">
       <h1 [class]="pageTitle">{{ heading() }}</h1>
       <p [class]="pageLede">
-        Halte fest, was passiert ist, ordne die betroffenen Programme zu und liste die Schritte auf, mit denen es behoben wurde.
+        Das Runbook lebt hier: Was passiert ist, welche Programme betroffen sind, und die Schritte zur Behebung. Externe Dokumentation verlinkst du pro Schritt — sie wird nicht im Wiki-Katalog gespeichert.
       </p>
     </header>
 
@@ -51,11 +51,11 @@
       </div>
 
       <app-label-picker
-        fieldLabel="Programme"
-        inputId="issue-programs"
-        [selected]="programs"
-        [catalog]="knownPrograms"
-        unknownMessage="Wähle ein vorhandenes Programm oder lege ein neues auf der Seite Bezeichnungen an."
+        fieldLabel="Bezeichnungen"
+        inputId="issue-tags"
+        [selected]="tags"
+        [catalog]="knownTags"
+        unknownMessage="Wähle eine vorhandene Bezeichnung oder lege eine neue auf der Seite Bezeichnungen an."
       />
 
       <app-checkpoint-editor [checkpoints]="checkpoints" />

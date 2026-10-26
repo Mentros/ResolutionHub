@@ -14,7 +14,7 @@
     <header [class]="pageHead">
       <h1 [class]="pageTitle">{{ heading() }}</h1>
       <p [class]="pageLede">
-        Benenne das Wiki, füge die Startadresse ein und speichere Seiten mit den Programmen und Wiki-Themen, die sie abdecken.
+        Externe Dokumentation indexieren: Name, Start-URL (https) und Seiten mit Links dorthin. Lösungen zu Vorgängen gehören in Vorgänge, nicht hierher.
       </p>
     </header>
 
@@ -63,11 +63,7 @@
         ></textarea>
       </div>
 
-      <app-wiki-entry-editor
-        [entries]="entries"
-        [programCatalog]="programCatalog"
-        [topicCatalog]="topicCatalog"
-      />
+      <app-wiki-entry-editor [entries]="entries" [tagCatalog]="tagCatalog" />
 
       <div class="flex flex-wrap gap-2">
         <button type="submit" [class]="btnPrimary" [disabled]="saving()">

@@ -5,31 +5,29 @@ import { apiErrorMessage } from './issue-api';
 
 export { apiErrorMessage, HttpErrorResponse };
 
-export const PROGRAMS_URL = '/api/programs';
-export const WIKI_TOPICS_URL = '/api/wiki-topics';
+export const TAGS_URL = '/api/tags';
+
+/** @deprecated Use TAGS_URL */
+export const PROGRAMS_URL = TAGS_URL;
+
+/** @deprecated Wiki topics merged into tags */
+export const WIKI_TOPICS_URL = TAGS_URL;
 
 @Injectable({ providedIn: 'root' })
-export class ProgramApi {
+export class TagApi {
   private readonly http = inject(HttpClient);
 
   create(name: string): Observable<{ name: string }> {
-    return this.http.post<{ name: string }>(PROGRAMS_URL, { name });
+    return this.http.post<{ name: string }>(TAGS_URL, { name });
   }
 
   delete(name: string): Observable<void> {
-    return this.http.delete<void>(PROGRAMS_URL, { body: { name } });
+    return this.http.delete<void>(TAGS_URL, { body: { name } });
   }
 }
 
-@Injectable({ providedIn: 'root' })
-export class WikiTopicApi {
-  private readonly http = inject(HttpClient);
+/** @deprecated Use TagApi */
+export const ProgramApi = TagApi;
 
-  create(name: string): Observable<{ name: string }> {
-    return this.http.post<{ name: string }>(WIKI_TOPICS_URL, { name });
-  }
-
-  delete(name: string): Observable<void> {
-    return this.http.delete<void>(WIKI_TOPICS_URL, { body: { name } });
-  }
-}
+/** @deprecated Use TagApi */
+export const WikiTopicApi = TagApi;

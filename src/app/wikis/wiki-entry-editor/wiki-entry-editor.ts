@@ -22,8 +22,7 @@ export interface WikiEntryDraft {
   title: string;
   pageUrl: string;
   notes: string;
-  programs: string[];
-  topics: string[];
+  tags: string[];
 }
 
 @Component({
@@ -49,24 +48,14 @@ export interface WikiEntryDraft {
 })
 export class WikiEntryEditor {
   @Input({ required: true }) entries!: WritableSignal<WikiEntryDraft[]>;
-  @Input({ required: true }) programCatalog!: Signal<string[]>;
-  @Input({ required: true }) topicCatalog!: Signal<string[]>;
+  @Input({ required: true }) tagCatalog!: Signal<string[]>;
 
-  readonly programPick = signal<Record<number, string | null>>({});
-  readonly topicPick = signal<Record<number, string | null>>({});
+  readonly tagPick = signal<Record<number, string | null>>({});
 
-  programOptions(key: number): CrsdOption[] {
+  tagOptions(key: number): CrsdOption[] {
     const row = this.entries().find((entry) => entry.key === key);
-    const chosen = new Set((row?.programs ?? []).map((name) => name.toLowerCase()));
-    return this.programCatalog()
-      .filter((name) => !chosen.has(name.toLowerCase()))
-      .map((name) => ({ value: name, label: name }));
-  }
-
-  topicOptions(key: number): CrsdOption[] {
-    const row = this.entries().find((entry) => entry.key === key);
-    const chosen = new Set((row?.topics ?? []).map((name) => name.toLowerCase()));
-    return this.topicCatalog()
+    const chosen = new Set((row?.tags ?? []).map((name) => name.toLowerCase()));
+    return this.tagCatalog()
       .filter((name) => !chosen.has(name.toLowerCase()))
       .map((name) => ({ value: name, label: name }));
   }
@@ -101,50 +90,39 @@ export class WikiEntryEditor {
     );
   }
 
-  addLabel(key: number, field: 'programs' | 'topics', name: string): void {
+  addTag(key: number, name: string): void {
     const trimmed = name.trim();
     if (!trimmed) return;
-    const catalog = field === 'programs' ? this.programCatalog() : this.topicCatalog();
-    const existing = catalog.find((entry) => entry.toLowerCase() === trimmed.toLowerCase());
+    const existing = this.tagCatalog().find((entry) => entry.toLowerCase() === trimmed.toLowerCase());
     if (!existing) return;
     this.entries.update((rows) =>
       rows.map((row) => {
         if (row.key !== key) return row;
-        const list = row[field];
-        if (list.some((entry) => entry.toLowerCase() === existing.toLowerCase())) return row;
-        return { ...row, [field]: [...list, existing] };
+        if (row.tags.some((entry) => entry.toLowerCase() === existing.toLowerCase())) return row;
+        return { ...row, tags: [...row.tags, existing] };
       }),
     );
   }
 
-  removeLabel(key: number, field: 'programs' | 'topics', name: string): void {
+  removeTag(key: number, name: string): void {
     this.entries.update((rows) =>
       rows.map((row) =>
-        row.key === key ? { ...row, [field]: row[field].filter((entry) => entry !== name) } : row,
+        row.key === key ? { ...row, tags: row.tags.filter((entry) => entry !== name) } : row,
       ),
     );
   }
 
-  onProgramPick(key: number, value: string | null): void {
-    if (value) this.addLabel(key, 'programs', value);
-    this.programPick.update((state) => ({ ...state, [key]: null }));
+  onTagPick(key: number, value: string | null): void {
+    if (value) this.addTag(key, value);
+    this.tagPick.update((state) => ({ ...state, [key]: null }));
   }
 
-  onTopicPick(key: number, value: string | null): void {
-    if (value) this.addLabel(key, 'topics', value);
-    this.topicPick.update((state) => ({ ...state, [key]: null }));
-  }
-
-  programPickerValue(key: number): string | null {
-    return this.programPick()[key] ?? null;
-  }
-
-  topicPickerValue(key: number): string | null {
-    return this.topicPick()[key] ?? null;
+  tagPickerValue(key: number): string | null {
+    return this.tagPick()[key] ?? null;
   }
 }
 
 function blankEntry(rows: WikiEntryDraft[]): WikiEntryDraft {
   const key = rows.reduce((max, row) => Math.max(max, row.key), 0) + 1;
-  return { key, title: '', pageUrl: '', notes: '', programs: [], topics: [] };
+  return { key, title: '', pageUrl: '', notes: '', tags: [] };
 }

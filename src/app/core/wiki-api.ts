@@ -9,21 +9,14 @@ import { WikiSite, WikiSiteInput, WikiSiteSummary } from './models';
 
 export const WIKI_SITES_URL = '/api/wiki-sites';
 
-export function wikiSiteListRequest(
-  query: string,
-  programs: string[],
-  topics: string[],
-): HttpResourceRequest {
+export function wikiSiteListRequest(query: string, tags: string[]): HttpResourceRequest {
   let params = new HttpParams();
   const trimmed = query.trim();
   if (trimmed) {
     params = params.set('q', trimmed);
   }
-  for (const program of programs) {
-    params = params.append('programs', program);
-  }
-  for (const topic of topics) {
-    params = params.append('topics', topic);
+  for (const tag of tags) {
+    params = params.append('tags', tag);
   }
   return { url: WIKI_SITES_URL, params };
 }

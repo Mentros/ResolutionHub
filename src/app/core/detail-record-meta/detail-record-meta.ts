@@ -7,12 +7,10 @@ import { TagList } from '../../issues/tag-list/tag-list';
   selector: 'app-detail-record-meta',
   imports: [DatePipe, CrsdBadge, TagList],
   templateUrl: './detail-record-meta.html',
-  styles: ':host { display: block; }',
 })
 export class DetailRecordMeta {
-  @Input() statLabel: string | null = null;
+  @Input({ required: true }) statLabel!: string;
   @Input({ required: true }) updatedAt!: string;
-  @Input() programs: string[] = [];
-  @Input() topics: string[] = [];
-  @Input() collapseAfter = 12;
+  @Input() tags: string[] = [];
+  @Input() collapseAfter = 6;
 }

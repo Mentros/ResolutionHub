@@ -1,18 +1,11 @@
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
 import { Component, WritableSignal, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
-import {
-  ProgramApi,
-  WikiTopicApi,
-  PROGRAMS_URL,
-  WIKI_TOPICS_URL,
-  apiErrorMessage,
-} from '../../core/labels-api';
+import { TagApi, TAGS_URL, apiErrorMessage } from '../../core/labels-api';
 import {
   CrsdAlert,
   CrsdAlertDescription,
   CrsdBtn,
-  CrsdCard,
   CrsdEmpty,
   CrsdEmptyDescription,
   CrsdField,
@@ -52,94 +45,54 @@ import {
   `,
 })
 export class TagsPage {
-  private readonly programApi = inject(ProgramApi);
-  private readonly topicApi = inject(WikiTopicApi);
+  private readonly tagApi = inject(TagApi);
 
-  readonly programDraft = signal('');
-  readonly topicDraft = signal('');
-  readonly savingProgram = signal(false);
-  readonly savingTopic = signal(false);
+  readonly draft = signal('');
+  readonly saving = signal(false);
   readonly error = signal<string | null>(null);
-  readonly activeTab = signal<'programs' | 'topics'>('programs');
   protected readonly pageSection = pageSection;
   protected readonly pageHead = pageHead;
   protected readonly pageTitle = pageTitle;
   protected readonly pageLede = pageLede;
   protected readonly btnPrimary = btnPrimary;
 
-  private readonly programResource = httpResource<string[]>(() => ({ url: PROGRAMS_URL }), {
+  private readonly tagResource = httpResource<string[]>(() => ({ url: TAGS_URL }), {
     defaultValue: [] as string[],
   });
 
-  private readonly topicResource = httpResource<string[]>(() => ({ url: WIKI_TOPICS_URL }), {
-    defaultValue: [] as string[],
-  });
+  readonly tags = this.tagResource.value;
 
-  readonly programs = this.programResource.value;
-  readonly topics = this.topicResource.value;
-
-  readonly loadingPrograms = () => {
-    const status = this.programResource.status();
+  readonly loading = () => {
+    const status = this.tagResource.status();
     return status === 'loading' || status === 'reloading';
   };
 
-  readonly loadingTopics = () => {
-    const status = this.topicResource.status();
-    return status === 'loading' || status === 'reloading';
-  };
-
-  addProgram(event: Event): void {
+  addTag(event: Event): void {
     event.preventDefault();
-    this.addName(this.programDraft, this.savingProgram, (name) => this.programApi.create(name), () =>
-      this.programResource.reload(),
+    this.addName(this.draft, this.saving, (name) => this.tagApi.create(name), () =>
+      this.tagResource.reload(),
     );
   }
 
-  addTopic(event: Event): void {
-    event.preventDefault();
-    this.addName(this.topicDraft, this.savingTopic, (name) => this.topicApi.create(name), () =>
-      this.topicResource.reload(),
-    );
-  }
-
-  removeProgram(name: string): void {
-    if (this.savingProgram() || this.savingTopic()) return;
+  removeTag(name: string): void {
+    if (this.saving()) return;
     if (
       !confirm(
-        `Programm „${name}“ entfernen? Es wird von jedem Vorgang und jeder Wiki-Seite entfernt, die es verwenden.`,
+        `Bezeichnung „${name}“ entfernen? Sie wird von Vorgängen und Wiki-Einträgen entfernt, die sie verwenden.`,
       )
     ) {
       return;
     }
-    this.savingProgram.set(true);
+    this.saving.set(true);
     this.error.set(null);
-    this.programApi.delete(name).subscribe({
+    this.tagApi.delete(name).subscribe({
       next: () => {
-        this.savingProgram.set(false);
-        this.programResource.reload();
+        this.saving.set(false);
+        this.tagResource.reload();
       },
       error: (err: unknown) => {
-        this.savingProgram.set(false);
-        this.error.set(apiErrorMessage(err, 'Das Programm konnte nicht entfernt werden.'));
-      },
-    });
-  }
-
-  removeTopic(name: string): void {
-    if (this.savingProgram() || this.savingTopic()) return;
-    if (!confirm(`Wiki-Thema „${name}“ entfernen? Es wird von jeder Wiki-Seite entfernt, die es verwendet.`)) {
-      return;
-    }
-    this.savingTopic.set(true);
-    this.error.set(null);
-    this.topicApi.delete(name).subscribe({
-      next: () => {
-        this.savingTopic.set(false);
-        this.topicResource.reload();
-      },
-      error: (err: unknown) => {
-        this.savingTopic.set(false);
-        this.error.set(apiErrorMessage(err, 'Das Wiki-Thema konnte nicht entfernt werden.'));
+        this.saving.set(false);
+        this.error.set(apiErrorMessage(err, 'Die Bezeichnung konnte nicht entfernt werden.'));
       },
     });
   }
