@@ -38,6 +38,7 @@ export interface IssueSummary {
   tags: string[];
   checkpointCount: number;
   updatedAt: string;
+  searchSnippet: string | null;
 }
 
 export interface WikiEntry {
@@ -67,7 +68,19 @@ export interface WikiSiteSummary {
   tags: string[];
   entryCount: number;
   updatedAt: string;
+  searchSnippet: string | null;
 }
+
+export interface GlobalSearchResult {
+  issues: IssueSummary[];
+  wikiSites: WikiSiteSummary[];
+}
+
+export interface ListQueryOptions {
+  limit?: number;
+}
+
+const MAX_LIST_LIMIT = 50;
 
 interface CheckpointInput {
   instruction: string;
@@ -896,7 +909,11 @@ export function deleteWikiSite(id: number): void {
   });
 }
 
-export function listWikiSites(query: string, tags: string[]): WikiSiteSummary[] {
+export function listWikiSites(
+  query: string,
+  tags: string[],
+  options?: ListQueryOptions,
+): WikiSiteSummary[] {
   const trimmedQuery = query.trim();
   if (trimmedQuery.length > 200) {
     throw new HttpError(400, 'Der Suchtext ist zu lang.');
@@ -905,9 +922,9 @@ export function listWikiSites(query: string, tags: string[]): WikiSiteSummary[] 
   const selectedTags = uniqueLabelNames(tags);
   const where: string[] = [];
   const params: Array<string | number> = [];
+  const limit = clampListLimit(options?.limit);
 
   if (fts) {
-    where.push('w.id IN (SELECT rowid FROM wiki_site_search WHERE wiki_site_search MATCH ?)');
     params.push(fts);
   }
   for (const tagName of selectedTags) {
@@ -921,6 +938,16 @@ export function listWikiSites(query: string, tags: string[]): WikiSiteSummary[] 
     );
     params.push(tagName);
   }
+  if (limit !== undefined) {
+    params.push(limit);
+  }
+
+  const ftsJoin = fts
+    ? 'INNER JOIN wiki_site_search ON wiki_site_search.rowid = w.id AND wiki_site_search MATCH ?'
+    : '';
+  const snippetSelect = fts
+    ? ", snippet(wiki_site_search, -1, '', '', '…', 16) AS searchSnippet"
+    : '';
 
   const sql = `
     SELECT
@@ -930,9 +957,12 @@ export function listWikiSites(query: string, tags: string[]): WikiSiteSummary[] 
       w.summary,
       w.updated_at AS updatedAt,
       json_array_length(w.entries_json) AS entryCount
+      ${snippetSelect}
     FROM wiki_sites w
+    ${ftsJoin}
     ${where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''}
     ORDER BY w.updated_at DESC, w.id DESC
+    ${limit !== undefined ? 'LIMIT ?' : ''}
   `;
 
   let rows: Record<string, SQLOutputValue>[];
@@ -956,6 +986,7 @@ export function listWikiSites(query: string, tags: string[]): WikiSiteSummary[] 
       tags: readWikiSiteTags(id),
       entryCount: num(row['entryCount']),
       updatedAt: text(row['updatedAt']),
+      searchSnippet: fts && row['searchSnippet'] != null ? text(row['searchSnippet']) : null,
     };
   });
 }
@@ -984,7 +1015,7 @@ function uniqueLabelNames(names: string[]): string[] {
   return unique;
 }
 
-export function listIssues(query: string, tags: string[]): IssueSummary[] {
+export function listIssues(query: string, tags: string[], options?: ListQueryOptions): IssueSummary[] {
   const trimmedQuery = query.trim();
   if (trimmedQuery.length > 200) {
     throw new HttpError(400, 'Der Suchtext ist zu lang.');
@@ -993,9 +1024,9 @@ export function listIssues(query: string, tags: string[]): IssueSummary[] {
   const selectedTags = uniqueLabelNames(tags);
   const where: string[] = [];
   const params: Array<string | number> = [];
+  const limit = clampListLimit(options?.limit);
 
   if (fts) {
-    where.push('i.id IN (SELECT rowid FROM issue_search WHERE issue_search MATCH ?)');
     params.push(fts);
   }
   if (selectedTags.length > 0) {
@@ -1012,6 +1043,16 @@ export function listIssues(query: string, tags: string[]): IssueSummary[] {
     );
     params.push(...selectedTags, selectedTags.length);
   }
+  if (limit !== undefined) {
+    params.push(limit);
+  }
+
+  const ftsJoin = fts
+    ? 'INNER JOIN issue_search ON issue_search.rowid = i.id AND issue_search MATCH ?'
+    : '';
+  const snippetSelect = fts
+    ? ", snippet(issue_search, -1, '', '', '…', 16) AS searchSnippet"
+    : '';
 
   const sql = `
     SELECT
@@ -1020,9 +1061,12 @@ export function listIssues(query: string, tags: string[]): IssueSummary[] {
       i.summary,
       i.updated_at AS updatedAt,
       i.checkpoints_json AS checkpointsJson
+      ${snippetSelect}
     FROM issues i
+    ${ftsJoin}
     ${where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''}
     ORDER BY i.updated_at DESC, i.id DESC
+    ${limit !== undefined ? 'LIMIT ?' : ''}
   `;
 
   let rows: Record<string, SQLOutputValue>[];
@@ -1045,8 +1089,23 @@ export function listIssues(query: string, tags: string[]): IssueSummary[] {
       tags: readIssueTags(id),
       checkpointCount: parseCheckpointsJson(text(row['checkpointsJson'])).length,
       updatedAt: text(row['updatedAt']),
+      searchSnippet: fts && row['searchSnippet'] != null ? text(row['searchSnippet']) : null,
     };
   });
+}
+
+export function globalSearch(query: string, limit: number): GlobalSearchResult {
+  const capped = clampListLimit(limit) ?? 8;
+  return {
+    issues: listIssues(query, [], { limit: capped }),
+    wikiSites: listWikiSites(query, [], { limit: capped }),
+  };
+}
+
+function clampListLimit(limit: number | undefined): number | undefined {
+  if (limit === undefined) return undefined;
+  if (!Number.isInteger(limit) || limit < 1) return undefined;
+  return Math.min(limit, MAX_LIST_LIMIT);
 }
 
 export function listTags(): string[] {

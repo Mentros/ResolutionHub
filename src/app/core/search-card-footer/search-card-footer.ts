@@ -13,4 +13,6 @@ export class SearchCardFooter {
   @Input({ required: true }) updatedAt!: string;
   @Input() tags: string[] = [];
   @Input() collapseAfter = 4;
+  /** List route for clickable tag filters (`/` or `/wikis`). */
+  @Input() tagFilterPath: string | null = null;
 }

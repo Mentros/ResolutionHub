@@ -13,4 +13,5 @@ export class DetailRecordMeta {
   @Input({ required: true }) updatedAt!: string;
   @Input() tags: string[] = [];
   @Input() collapseAfter = 6;
+  @Input() tagFilterPath: string | null = null;
 }

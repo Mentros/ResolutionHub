@@ -11,6 +11,7 @@ import {
   deleteWikiSite,
   getIssue,
   getWikiSite,
+  globalSearch,
   initDatabase,
   listIssues,
   listTags,
@@ -111,6 +112,14 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
       send(res, 204);
       return;
     }
+  }
+
+  if (path === '/api/search' && method === 'GET') {
+    const q = url.searchParams.get('q') ?? '';
+    const limitRaw = Number(url.searchParams.get('limit') ?? '8');
+    const limit = Number.isFinite(limitRaw) ? limitRaw : 8;
+    send(res, 200, globalSearch(q, limit));
+    return;
   }
 
   if (path === '/api/issues' && method === 'GET') {

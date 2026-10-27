@@ -30,6 +30,7 @@
             [statLabel]="checkpointLabel(issue.checkpoints.length)"
             [updatedAt]="issue.updatedAt"
             [tags]="issue.tags"
+            tagFilterPath="/"
           >
             <button type="button" crsdBtn variant="outline" [routerLink]="['/issues', issue.id, 'edit']">
               Bearbeiten

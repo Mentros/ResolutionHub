@@ -1,19 +1,25 @@
-<a
+<div
   crsdCard
   variant="elevated"
-  class="flex flex-col gap-0 p-5 no-underline transition-colors hover:border-primary/40"
-  [routerLink]="['/issues', issue.id]"
+  class="flex flex-col gap-0 p-5 transition-colors hover:border-primary/40"
 >
-  <div class="flex flex-col gap-2">
+  <a
+    class="flex flex-col gap-2 no-underline text-inherit"
+    [routerLink]="['/issues', issue.id]"
+  >
     <h2 crsdCardTitle class="text-xl leading-snug">{{ issue.title }}</h2>
     @if (issue.summary) {
       <p crsdCardDescription class="line-clamp-3 text-sm leading-relaxed">{{ issue.summary }}</p>
     }
-  </div>
+    @if (issue.searchSnippet) {
+      <p class="line-clamp-2 text-xs text-muted-foreground">{{ issue.searchSnippet }}</p>
+    }
+  </a>
 
   <app-search-card-footer
     [statLabel]="checkpointLabel(issue.checkpointCount)"
     [updatedAt]="issue.updatedAt"
     [tags]="issue.tags"
+    tagFilterPath="/"
   />
-</a>
+</div>

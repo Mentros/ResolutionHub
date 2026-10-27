@@ -1,0 +1,138 @@
+<div crsdDialog class="flex w-full min-w-0 items-center" [state]="dialogState()" (stateChange)="onDialogStateChange($event)">
+  <button
+    type="button"
+    crsdBtn
+    variant="outline"
+    size="sm"
+    class="hidden h-9 w-full min-w-0 justify-start gap-2 font-normal text-muted-foreground sm:inline-flex"
+    crsdDialogTrigger
+    aria-keyshortcuts="Control+K Meta+K"
+  >
+    <crsd-icon name="search" size="sm" aria-hidden="true" />
+    <span class="truncate">Tickets, Wikis durchsuchen…</span>
+    <kbd class="ml-auto hidden shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground lg:inline">Strg+K</kbd>
+  </button>
+  <button
+    type="button"
+    crsdBtn
+    variant="ghost"
+    size="sm"
+    class="inline-flex shrink-0 sm:hidden"
+    crsdDialogTrigger
+    aria-label="Suche öffnen"
+  >
+    <crsd-icon name="search" size="sm" aria-hidden="true" />
+  </button>
+
+  <ng-template crsdDialogPortal>
+    <div crsdDialogContent class="max-w-lg gap-0 p-0 sm:max-w-lg">
+      <div class="flex flex-col gap-4 px-6 pt-6">
+        <div crsdDialogHeader class="space-y-1 text-left">
+          <h2 crsdDialogTitle>Alles durchsuchen</h2>
+          <p crsdDialogDescription>Tickets und Wikis in einem Schritt finden.</p>
+        </div>
+
+        <div crsdField class="gap-1.5">
+          <label crsdLabel for="global-search-input">Suchbegriff</label>
+          <input
+            crsdInput
+            id="global-search-input"
+            type="search"
+            autocomplete="off"
+            placeholder="Stichwort, Programm, Wiki-Seite…"
+            [value]="draft()"
+            (input)="onInput($event)"
+          />
+          @if (draft().trim().length === 0) {
+            <p crsdFieldDescription>Gib einen Suchbegriff ein.</p>
+          }
+        </div>
+
+        @if (error()) {
+          <div crsdAlert variant="error">
+            <p crsdAlertDescription>{{ error() }}</p>
+          </div>
+        }
+
+        @if (draft().trim().length > 0) {
+          <div class="max-h-[min(40vh,16rem)] overflow-y-auto overscroll-contain">
+            @if (loading()) {
+              <div class="flex items-center gap-2 text-sm text-muted-foreground">
+                <crsd-spinner size="sm" label="Suche läuft" />
+                Suche läuft…
+              </div>
+            } @else if (empty()) {
+              <p class="text-sm text-muted-foreground">Keine Treffer.</p>
+            } @else {
+              @if (results().issues.length > 0) {
+                <section class="mb-3">
+                  <h3 class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Tickets
+                  </h3>
+                  <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
+                    @for (issue of results().issues; track issue.id) {
+                      <li>
+                        <button
+                          type="button"
+                          class="flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                          (click)="openIssue(issue.id)"
+                        >
+                          <span class="font-medium text-foreground">{{ issue.title }}</span>
+                          @if (issue.searchSnippet) {
+                            <span class="line-clamp-2 text-xs text-muted-foreground">{{ issue.searchSnippet }}</span>
+                          }
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                  <a
+                    class="mt-1 inline-block text-xs text-primary hover:underline"
+                    [routerLink]="['/']"
+                    [queryParams]="listQueryForDraft()"
+                    crsdDialogClose
+                  >
+                    Alle Tickets anzeigen
+                  </a>
+                </section>
+              }
+
+              @if (results().wikiSites.length > 0) {
+                <section>
+                  <h3 class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Wikis</h3>
+                  <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
+                    @for (site of results().wikiSites; track site.id) {
+                      <li>
+                        <button
+                          type="button"
+                          class="flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                          (click)="openWiki(site.id)"
+                        >
+                          <span class="font-medium text-foreground">{{ site.name }}</span>
+                          @if (site.searchSnippet) {
+                            <span class="line-clamp-2 text-xs text-muted-foreground">{{ site.searchSnippet }}</span>
+                          }
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                  <a
+                    class="mt-1 inline-block text-xs text-primary hover:underline"
+                    [routerLink]="['/wikis']"
+                    [queryParams]="listQueryForDraft()"
+                    crsdDialogClose
+                  >
+                    Alle Wikis anzeigen
+                  </a>
+                </section>
+              }
+            }
+          </div>
+        }
+      </div>
+
+      <div crsdDialogFooter class="mt-4 border-t border-border/60 px-6 py-4">
+        <button type="button" crsdBtn variant="outline" crsdDialogClose>Schließen</button>
+      </div>
+    </div>
+  </ng-template>
+</div>

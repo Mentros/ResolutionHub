@@ -24,6 +24,7 @@ import {
   pageTitle,
 } from '../../core/crsd-ui';
 import { ListSearchInput } from '../../core/list-search-input/list-search-input';
+import { wireListQueryUrlSync } from '../../core/list-query-url-sync';
 import { IssueCard } from '../issue-card/issue-card';
 import { TagFilter } from '../tag-filter/tag-filter';
 
@@ -85,6 +86,12 @@ export class IssueList {
   });
 
   constructor() {
+    wireListQueryUrlSync({
+      query: this.search.query,
+      tags: this.search.tags,
+      draft: this.draft,
+    });
+
     this.queryChanges.pipe(debounceTime(200), takeUntilDestroyed()).subscribe((value) => {
       this.search.query.set(value);
     });
@@ -96,6 +103,7 @@ export class IssueList {
   }
 
   onSearchCleared(): void {
+    this.draft.set('');
     this.search.query.set('');
   }
 

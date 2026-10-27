@@ -5,15 +5,32 @@
     }
     <ul class="flex flex-wrap gap-1.5 p-0 m-0 list-none">
       @for (tag of visibleTags(); track tag) {
-        <li
-          crsdBadge
-          [color]="badgeColor()"
-          variant="soft"
-          size="sm"
-          class="max-w-[12rem] truncate"
-          [attr.title]="tag"
-        >
-          {{ tag }}
+        <li>
+          @if (tagFilterPath(); as filterPath) {
+            <a
+              crsdBadge
+              [color]="badgeColor()"
+              variant="soft"
+              size="sm"
+              class="max-w-[12rem] truncate no-underline hover:opacity-90"
+              [routerLink]="filterPath"
+              [queryParams]="tagQueryParams(tag)"
+              [attr.title]="'Nach „' + tag + '“ filtern'"
+            >
+              {{ tag }}
+            </a>
+          } @else {
+            <span
+              crsdBadge
+              [color]="badgeColor()"
+              variant="soft"
+              size="sm"
+              class="max-w-[12rem] truncate"
+              [attr.title]="tag"
+            >
+              {{ tag }}
+            </span>
+          }
         </li>
       }
       @if (hiddenCount() > 0) {

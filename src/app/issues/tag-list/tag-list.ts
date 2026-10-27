@@ -1,9 +1,11 @@
-import { Component, Input, computed, signal } from '@angular/core';
+import { Component, Input, computed, input, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { CrsdBadge, CrsdBtn, type CrsdBadgeColor } from '@mentros/crsd-ui';
+import { queryParamsForTagFilter } from '../../core/list-query-params';
 
 @Component({
   selector: 'app-tag-list',
-  imports: [CrsdBadge, CrsdBtn],
+  imports: [RouterLink, CrsdBadge, CrsdBtn],
   templateUrl: './tag-list.html',
   styles: `
     :host {
@@ -26,7 +28,14 @@ export class TagList {
   /** When set, collapse long lists until the user expands them. */
   @Input() collapseAfter = 0;
 
+  /** When set, chips link to this list route with a tag filter (e.g. `/` or `/wikis`). */
+  readonly tagFilterPath = input<string | null>(null);
+
   readonly expanded = signal(false);
+
+  tagQueryParams(tag: string): Record<string, string | string[] | null> {
+    return queryParamsForTagFilter(tag);
+  }
 
   readonly badgeColor = computed((): CrsdBadgeColor => {
     if (this.kind === 'topic') return 'info';

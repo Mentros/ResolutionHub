@@ -23,6 +23,7 @@ export interface IssueSummary {
   tags: string[];
   checkpointCount: number;
   updatedAt: string;
+  searchSnippet: string | null;
 }
 
 export interface CheckpointInput {
@@ -65,6 +66,12 @@ export interface WikiSiteSummary {
   tags: string[];
   entryCount: number;
   updatedAt: string;
+  searchSnippet: string | null;
+}
+
+export interface GlobalSearchResult {
+  issues: IssueSummary[];
+  wikiSites: WikiSiteSummary[];
 }
 
 export interface WikiEntryInput {
