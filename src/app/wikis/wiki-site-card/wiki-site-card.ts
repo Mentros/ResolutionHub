@@ -14,6 +14,6 @@ export class WikiSiteCard {
   @Input({ required: true }) site!: WikiSiteSummary;
 
   entryLabel(count: number): string {
-    return count === 1 ? '1 Seite' : `${count} Seiten`;
+    return count === 1 ? '1 Eintrag' : `${count} Einträge`;
   }
 }

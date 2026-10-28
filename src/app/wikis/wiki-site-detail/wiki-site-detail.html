@@ -25,19 +25,6 @@
           @if (site.summary) {
             <p [class]="pageLede">{{ site.summary }}</p>
           }
-          @if (site.baseUrl) {
-            <p class="text-sm">
-              <a
-                class="break-all text-primary hover:underline"
-                [href]="site.baseUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {{ site.baseUrl }}
-              </a>
-            </p>
-          }
-
           <app-detail-record-meta
             [statLabel]="entryLabel(site.entries.length)"
             [updatedAt]="site.updatedAt"
@@ -47,7 +34,7 @@
             </button>
             <crsd-confirm-dialog
               title="Wiki löschen?"
-              description="Die gespeicherten Seiten werden ebenfalls entfernt."
+              description="Die gespeicherten Einträge werden ebenfalls entfernt."
               cancelLabel="Abbrechen"
               confirmLabel="Löschen"
               [destructive]="true"

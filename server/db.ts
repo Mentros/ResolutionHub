@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { DatabaseSync, type SQLOutputValue } from 'node:sqlite';
 import { dirname } from 'node:path';
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 export class HttpError extends Error {
   constructor(
@@ -45,7 +45,7 @@ export interface WikiEntry {
   id: number;
   position: number;
   title: string;
-  pageUrl: string;
+  locations: string[];
   notes: string;
   tags: string[];
 }
@@ -53,7 +53,6 @@ export interface WikiEntry {
 export interface WikiSite {
   id: number;
   name: string;
-  baseUrl: string;
   summary: string;
   entries: WikiEntry[];
   createdAt: string;
@@ -63,7 +62,6 @@ export interface WikiSite {
 export interface WikiSiteSummary {
   id: number;
   name: string;
-  baseUrl: string;
   summary: string;
   tags: string[];
   entryCount: number;
@@ -97,14 +95,13 @@ interface IssueInput {
 
 interface WikiEntryInput {
   title: string;
-  pageUrl: string;
+  locations: string[];
   notes: string;
   tags: string[];
 }
 
 interface WikiSiteInput {
   name: string;
-  baseUrl: string;
   summary: string;
   entries: WikiEntryInput[];
 }
@@ -123,9 +120,15 @@ export function initDatabase(dbPath: string): void {
   db.exec('PRAGMA journal_mode = WAL;');
   database = db;
 
-  const version = schemaVersion();
-  if (version < SCHEMA_VERSION) {
-    migrateToV3();
+  const startVersion = schemaVersion();
+  if (startVersion < SCHEMA_VERSION) {
+    if (startVersion < 3) {
+      migrateToV3();
+    }
+    ensureSchemaV3();
+    if (startVersion < 4) {
+      migrateToV4();
+    }
     setSchemaVersion(SCHEMA_VERSION);
   } else {
     ensureSchemaV3();
@@ -331,9 +334,10 @@ function migrateToV3(): void {
           const topicNames = readTopics
             ? readTopics.all(entryId).map((r) => text(r['name']))
             : [];
+          const pageUrl = text(entry['pageUrl']);
           stored.push({
             title: text(entry['title']),
-            pageUrl: text(entry['pageUrl']),
+            locations: pageUrl ? [pageUrl] : [],
             notes: text(entry['notes']),
             tags: mergeTagNames(programNames, topicNames),
           });
@@ -371,6 +375,23 @@ function migrateToV3(): void {
       .map((row) => num(row['id']));
     for (const wikiSiteId of wikiSiteIds) {
       rebuildWikiSearch(wikiSiteId);
+    }
+  });
+}
+
+function migrateToV4(): void {
+  transaction(() => {
+    const connection = db();
+    const rows = connection.prepare('SELECT id, entries_json FROM wiki_sites').all();
+    const update = connection.prepare(
+      'UPDATE wiki_sites SET entries_json = ?, base_url = ? WHERE id = ?',
+    );
+    for (const row of rows) {
+      const id = num(row['id']);
+      const entries = parseEntriesJson(text(row['entries_json']));
+      update.run(JSON.stringify(entries), '', id);
+      syncWikiTagsFromJson(id, JSON.stringify(entries));
+      rebuildWikiSearch(id);
     }
   });
 }
@@ -452,6 +473,59 @@ function normalizeUrl(value: unknown): string | null {
   return url.toString();
 }
 
+function isSharePath(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed.startsWith('\\\\') || trimmed.startsWith('//');
+}
+
+function normalizeWikiLocation(value: unknown, label: string): string {
+  if (value == null) {
+    throw new HttpError(400, `${label} muss Text sein.`);
+  }
+  if (typeof value !== 'string') {
+    throw new HttpError(400, `${label} muss Text sein.`);
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new HttpError(400, `${label} darf nicht leer sein.`);
+  }
+  if (isSharePath(trimmed)) {
+    return optionalText(trimmed, label, 500);
+  }
+  const url = normalizeUrl(trimmed);
+  if (!url) {
+    throw new HttpError(400, `${label} muss eine gültige http- oder https-Adresse oder ein UNC-Pfad sein.`);
+  }
+  return url;
+}
+
+function readStoredWikiLocation(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (isSharePath(trimmed)) {
+    return trimmed.length <= 500 ? trimmed : null;
+  }
+  try {
+    return normalizeUrl(trimmed);
+  } catch {
+    return null;
+  }
+}
+
+function readStoredWikiLocations(fields: Record<string, unknown>): string[] {
+  const locations: string[] = [];
+  if (Array.isArray(fields['locations'])) {
+    for (const item of fields['locations']) {
+      const loc = readStoredWikiLocation(item);
+      if (loc) locations.push(loc);
+    }
+    return locations;
+  }
+  const legacy = readStoredWikiLocation(fields['pageUrl']);
+  return legacy ? [legacy] : [];
+}
+
 function normalizeLabelNames(value: unknown, label: string): string[] {
   if (value == null) return [];
   if (!Array.isArray(value)) {
@@ -524,9 +598,9 @@ function parseEntriesJson(raw: string): StoredWikiEntry[] {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
     const fields = entry as Record<string, unknown>;
     out.push({
-      title: optionalText(fields['title'], 'Seitentitel', 200),
-      pageUrl: normalizeUrl(fields['pageUrl']) ?? '',
-      notes: optionalText(fields['notes'], 'Seitennotiz', 5000),
+      title: optionalText(fields['title'], 'Eintragstitel', 200),
+      locations: readStoredWikiLocations(fields),
+      notes: optionalText(fields['notes'], 'Notiz', 5000),
       tags: parseTagsField(fields, 'Bezeichnungen'),
     });
   }
@@ -548,7 +622,7 @@ function toWikiEntries(stored: StoredWikiEntry[]): WikiEntry[] {
     id: position + 1,
     position,
     title: entry.title,
-    pageUrl: entry.pageUrl,
+    locations: entry.locations,
     notes: entry.notes,
     tags: entry.tags,
   }));
@@ -735,35 +809,43 @@ function parseWikiSiteInput(body: unknown): WikiSiteInput {
   if (!name) {
     throw new HttpError(400, 'Der Name ist erforderlich.');
   }
-  const baseUrl = normalizeUrl(record['baseUrl']);
-  if (!baseUrl) {
-    throw new HttpError(400, 'Die Website-URL ist erforderlich und muss http oder https sein.');
-  }
   const summary = optionalText(record['summary'], 'Zusammenfassung', 5000);
   if (!Array.isArray(record['entries']) && record['entries'] != null) {
-    throw new HttpError(400, 'Seiten müssen eine Liste sein.');
+    throw new HttpError(400, 'Einträge müssen eine Liste sein.');
   }
   const rawEntries = Array.isArray(record['entries']) ? record['entries'] : [];
   const entries: WikiEntryInput[] = [];
   for (const entry of rawEntries) {
     if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
-      throw new HttpError(400, 'Jede Seite muss ein Objekt sein.');
+      throw new HttpError(400, 'Jeder Eintrag muss ein Objekt sein.');
     }
     const fields = entry as Record<string, unknown>;
-    const title = optionalText(fields['title'], 'Seitentitel', 200);
-    const pageUrl = normalizeUrl(fields['pageUrl']);
-    const notes = optionalText(fields['notes'], 'Seitennotiz', 5000);
+    const title = optionalText(fields['title'], 'Eintragstitel', 200);
+    const notes = optionalText(fields['notes'], 'Notiz', 5000);
     const tags = parseTagsField(fields, 'Bezeichnungen');
-    if (!title && !pageUrl && !notes && tags.length === 0) continue;
+    const rawLocations = fields['locations'];
+    const locations: string[] = [];
+    if (rawLocations != null) {
+      if (!Array.isArray(rawLocations)) {
+        throw new HttpError(400, 'Fundorte müssen eine Liste sein.');
+      }
+      for (const item of rawLocations) {
+        locations.push(normalizeWikiLocation(item, 'Fundort'));
+      }
+    }
+    if (!title && locations.length === 0 && !notes && tags.length === 0) continue;
     if (!title) {
-      throw new HttpError(400, 'Jede Seite braucht einen Titel.');
+      throw new HttpError(400, 'Jeder Eintrag braucht einen Titel.');
     }
-    if (!pageUrl) {
-      throw new HttpError(400, 'Jede Seite braucht eine gültige http- oder https-Adresse.');
+    if (locations.length === 0 && !notes) {
+      throw new HttpError(
+        400,
+        'Jeder Eintrag braucht mindestens einen Fundort oder eine Notiz.',
+      );
     }
-    entries.push({ title, pageUrl, notes, tags });
+    entries.push({ title, locations, notes, tags });
   }
-  return { name, baseUrl, summary, entries };
+  return { name, summary, entries };
 }
 
 function readWikiSiteTags(wikiSiteId: number): string[] {
@@ -816,7 +898,7 @@ function syncWikiTagsFromEntries(wikiSiteId: number, entries: WikiEntryInput[]):
 export function getWikiSite(id: number): WikiSite | null {
   const row = db()
     .prepare(
-      `SELECT id, name, base_url AS baseUrl, summary, entries_json AS entriesJson,
+      `SELECT id, name, summary, entries_json AS entriesJson,
               created_at AS createdAt, updated_at AS updatedAt
        FROM wiki_sites WHERE id = ?`,
     )
@@ -825,7 +907,6 @@ export function getWikiSite(id: number): WikiSite | null {
   return {
     id: num(row['id']),
     name: text(row['name']),
-    baseUrl: text(row['baseUrl']),
     summary: text(row['summary']),
     entries: readWikiEntriesFromRow(text(row['entriesJson'])),
     createdAt: text(row['createdAt']),
@@ -841,7 +922,7 @@ function rebuildWikiSearch(wikiSiteId: number): void {
   const labelNames = readWikiSiteTags(wikiSiteId).join(' ');
   const entryText = site.entries
     .map((entry) =>
-      [entry.title, entry.pageUrl, entry.notes, ...entry.tags].filter(Boolean).join(' '),
+      [entry.title, ...entry.locations, entry.notes, ...entry.tags].filter(Boolean).join(' '),
     )
     .join('\n');
   connection
@@ -860,7 +941,7 @@ function insertWikiSite(input: WikiSiteInput, timestamp: string): WikiSite {
         `INSERT INTO wiki_sites (name, base_url, summary, entries_json, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .run(input.name, input.baseUrl, input.summary, JSON.stringify(input.entries), timestamp, timestamp);
+      .run(input.name, '', input.summary, JSON.stringify(input.entries), timestamp, timestamp);
     const id = Number(result.lastInsertRowid);
     syncWikiTagsFromEntries(id, input.entries);
     rebuildWikiSearch(id);
@@ -888,7 +969,7 @@ export function updateWikiSite(id: number, body: unknown): WikiSite {
       .prepare(
         'UPDATE wiki_sites SET name = ?, base_url = ?, summary = ?, entries_json = ?, updated_at = ? WHERE id = ?',
       )
-      .run(input.name, input.baseUrl, input.summary, JSON.stringify(input.entries), new Date().toISOString(), id);
+      .run(input.name, '', input.summary, JSON.stringify(input.entries), new Date().toISOString(), id);
     syncWikiTagsFromEntries(id, input.entries);
     rebuildWikiSearch(id);
     const site = getWikiSite(id);
@@ -953,7 +1034,6 @@ export function listWikiSites(
     SELECT
       w.id,
       w.name,
-      w.base_url AS baseUrl,
       w.summary,
       w.updated_at AS updatedAt,
       json_array_length(w.entries_json) AS entryCount
@@ -981,7 +1061,6 @@ export function listWikiSites(
     return {
       id,
       name: text(row['name']),
-      baseUrl: text(row['baseUrl']),
       summary: text(row['summary']),
       tags: readWikiSiteTags(id),
       entryCount: num(row['entryCount']),
@@ -1168,7 +1247,7 @@ export function deleteTag(body: unknown): void {
       if (!site) continue;
       const entries = site.entries.map((entry) => ({
         title: entry.title,
-        pageUrl: entry.pageUrl,
+        locations: entry.locations,
         notes: entry.notes,
         tags: entry.tags.filter((t) => t.toLowerCase() !== name.toLowerCase()),
       }));
@@ -1263,22 +1342,24 @@ function seedWikiSitesIfEmpty(): void {
   insertWikiSite(
     {
       name: 'Microsoft Teams docs',
-      baseUrl: 'https://learn.microsoft.com/en-us/microsoftteams/',
       summary:
         'Official Teams troubleshooting and admin articles. Use it when the desktop client or meetings misbehave.',
       entries: [
         {
           title: 'Troubleshoot meetings',
-          pageUrl:
+          locations: [
             'https://learn.microsoft.com/en-us/microsoftteams/troubleshoot/meetings/troubleshoot-meetings',
+          ],
           notes: 'Join failures, audio, and screen sharing on the desktop app.',
           tags: ['Teams', 'Microsoft', 'documentation'],
         },
         {
           title: 'Clear Teams cache',
-          pageUrl:
+          locations: [
             'https://learn.microsoft.com/en-us/microsoftteams/troubleshoot/teams-sign-in/sign-in-loop',
-          notes: 'Sign-in loops and stale profiles after an upgrade.',
+            '\\\\fileserver\\support\\teams\\cache-reset',
+          ],
+          notes: 'Sign-in loops, stale profiles, and the internal cache-reset guide on the share.',
           tags: ['Teams', 'documentation', 'error codes'],
         },
       ],
@@ -1289,13 +1370,15 @@ function seedWikiSitesIfEmpty(): void {
   insertWikiSite(
     {
       name: 'Skype support',
-      baseUrl: 'https://support.microsoft.com/en-us/skype',
       summary: 'Legacy Skype client help for presence, sign-in, and profile issues.',
       entries: [
         {
           title: 'Skype help home',
-          pageUrl: 'https://support.microsoft.com/en-us/skype/skype-help',
-          notes: 'Start here for sign-in and presence problems.',
+          locations: [
+            'https://support.microsoft.com/en-us/skype/skype-help',
+            '\\\\fileserver\\support\\skype\\profile-reset',
+          ],
+          notes: 'Start here for sign-in and presence; profile reset steps on the file share.',
           tags: ['Skype', 'Microsoft', 'documentation'],
         },
       ],

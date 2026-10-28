@@ -14,7 +14,7 @@
     <header [class]="pageHead">
       <h1 [class]="pageTitle">{{ heading() }}</h1>
       <p [class]="pageLede">
-        Externe Dokumentation indexieren: Name, Start-URL (https) und Seiten mit Links dorthin. Lösungen zu Tickets gehören unter Tickets, nicht hierher.
+        Dokumentation indexieren: Name, Einträge mit Fundorten (Web oder Freigabe) und Bezeichnungen. Lösungen zu Tickets gehören unter Tickets, nicht hierher.
       </p>
     </header>
 
@@ -35,19 +35,6 @@
           required
           maxlength="200"
           autocomplete="off"
-        />
-      </div>
-
-      <div crsdField>
-        <label crsdLabel for="wiki-base-url">Website-URL</label>
-        <input
-          id="wiki-base-url"
-          type="url"
-          crsdInput
-          [value]="baseUrl()"
-          (valueChange)="baseUrl.set($event)"
-          required
-          placeholder="https://learn.microsoft.com/en-us/microsoftteams/"
         />
       </div>
 

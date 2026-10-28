@@ -1,17 +1,43 @@
+@if (error()) {
+  <p class="text-sm text-destructive">{{ error() }}</p>
+}
 <ul class="m-0 flex list-none flex-col gap-4 p-0">
   @for (entry of entries; track entry.id) {
     <li crsdCard class="gap-3 p-4">
       <h2 class="text-lg font-semibold">{{ entry.title }}</h2>
-      <p class="text-sm">
-        <a
-          class="break-all text-primary hover:underline"
-          [href]="entry.pageUrl"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {{ entry.pageUrl }}
-        </a>
-      </p>
+      @if (entry.locations.length > 0) {
+        <ul class="m-0 flex list-none flex-col gap-2 p-0">
+          @for (loc of entry.locations; track $index; let locIndex = $index) {
+            <li>
+              @if (isWebLocation(loc)) {
+                <a
+                  class="break-all text-primary hover:underline"
+                  [href]="loc"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {{ loc }}
+                </a>
+              } @else {
+                <div class="flex flex-wrap items-center gap-2">
+                  <code class="min-w-48 flex-1 rounded-md bg-muted px-3 py-2 font-mono text-sm break-all">
+                    {{ loc }}
+                  </code>
+                  <button
+                    type="button"
+                    crsdBtn
+                    variant="outline"
+                    size="sm"
+                    (click)="copyPath(entry.id, locIndex, loc)"
+                  >
+                    {{ copied(entry.id, locIndex) ? 'Kopiert' : 'Pfad kopieren' }}
+                  </button>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      }
       @if (entry.notes) {
         <p class="text-sm text-muted-foreground">{{ entry.notes }}</p>
       }

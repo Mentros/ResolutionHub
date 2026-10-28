@@ -20,7 +20,7 @@ import { RemovableLabelChips } from '../../core/label-chips/removable-label-chip
 export interface WikiEntryDraft {
   key: number;
   title: string;
-  pageUrl: string;
+  locations: string[];
   notes: string;
   tags: string[];
 }
@@ -84,9 +84,38 @@ export class WikiEntryEditor {
     });
   }
 
-  setField(key: number, field: 'title' | 'pageUrl' | 'notes', value: string): void {
+  setField(key: number, field: 'title' | 'notes', value: string): void {
     this.entries.update((rows) =>
       rows.map((row) => (row.key === key ? { ...row, [field]: value } : row)),
+    );
+  }
+
+  setLocation(entryKey: number, index: number, value: string): void {
+    this.entries.update((rows) =>
+      rows.map((row) => {
+        if (row.key !== entryKey) return row;
+        const locations = row.locations.slice();
+        locations[index] = value;
+        return { ...row, locations };
+      }),
+    );
+  }
+
+  addLocation(entryKey: number): void {
+    this.entries.update((rows) =>
+      rows.map((row) =>
+        row.key === entryKey ? { ...row, locations: [...row.locations, ''] } : row,
+      ),
+    );
+  }
+
+  removeLocation(entryKey: number, index: number): void {
+    this.entries.update((rows) =>
+      rows.map((row) => {
+        if (row.key !== entryKey) return row;
+        const locations = row.locations.filter((_, i) => i !== index);
+        return { ...row, locations: locations.length > 0 ? locations : [''] };
+      }),
     );
   }
 
@@ -124,5 +153,5 @@ export class WikiEntryEditor {
 
 function blankEntry(rows: WikiEntryDraft[]): WikiEntryDraft {
   const key = rows.reduce((max, row) => Math.max(max, row.key), 0) + 1;
-  return { key, title: '', pageUrl: '', notes: '', tags: [] };
+  return { key, title: '', locations: [''], notes: '', tags: [] };
 }

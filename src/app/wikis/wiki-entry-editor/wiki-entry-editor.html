@@ -1,12 +1,12 @@
 <fieldset class="m-0 flex flex-col gap-4 border-0 p-0">
-  <legend class="text-sm font-medium">Seiten</legend>
+  <legend class="text-sm font-medium">Einträge</legend>
   <p crsdFieldDescription>
-    Externe Seiten verlinken. Bezeichnungen pro Seite steuern die Wiki-Suche.
+    Pro Eintrag: welche Information gesucht wird, optional Fundorte (https oder Freigabepfad) und Bezeichnungen für die Suche.
   </p>
   @for (entry of entries(); track entry.key; let index = $index, first = $first, last = $last) {
     <div crsdCard class="gap-4 p-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-lg font-semibold">Seite {{ index + 1 }}</h2>
+        <h2 class="text-lg font-semibold">Eintrag {{ index + 1 }}</h2>
         <div class="flex flex-wrap gap-2">
           <button type="button" crsdBtn variant="outline" size="sm" (click)="move(entry.key, -1)" [disabled]="first">
             Nach oben
@@ -30,15 +30,38 @@
         />
       </div>
       <div crsdField>
-        <label crsdLabel [attr.for]="'wiki-entry-url-' + entry.key">Seiten-URL</label>
-        <input
-          [id]="'wiki-entry-url-' + entry.key"
-          type="url"
-          crsdInput
-          [value]="entry.pageUrl"
-          (valueChange)="setField(entry.key, 'pageUrl', $event)"
-          placeholder="https://learn.microsoft.com/..."
-        />
+        <span crsdLabel [id]="'wiki-entry-locations-' + entry.key">Fundorte</span>
+        <p crsdFieldDescription [attr.id]="'wiki-entry-locations-hint-' + entry.key">
+          Link (https) oder UNC-Pfad zu Ordner oder Datei, z. B. \\server\share\guide.docx
+        </p>
+        <div class="flex flex-col gap-2" [attr.aria-labelledby]="'wiki-entry-locations-' + entry.key">
+          @for (loc of entry.locations; track $index; let locIndex = $index) {
+            <div class="flex flex-wrap items-center gap-2">
+              <input
+                [id]="'wiki-entry-loc-' + entry.key + '-' + locIndex"
+                crsdInput
+                class="min-w-0 flex-1"
+                [value]="loc"
+                (valueChange)="setLocation(entry.key, locIndex, $event)"
+                placeholder="https://… oder \\server\share\…"
+                spellcheck="false"
+              />
+              <button
+                type="button"
+                crsdBtn
+                variant="outline"
+                size="sm"
+                (click)="removeLocation(entry.key, locIndex)"
+                [disabled]="entry.locations.length === 1 && !loc.trim()"
+              >
+                Entfernen
+              </button>
+            </div>
+          }
+          <button type="button" crsdBtn variant="outline" size="sm" (click)="addLocation(entry.key)">
+            Fundort hinzufügen
+          </button>
+        </div>
       </div>
       <div crsdField>
         <label crsdLabel [attr.for]="'wiki-entry-notes-' + entry.key">Notizen</label>
@@ -49,7 +72,7 @@
           rows="2"
           [value]="entry.notes"
           (valueChange)="setField(entry.key, 'notes', $event)"
-          placeholder="Wann diese Seite geöffnet werden soll"
+          placeholder="Wann diese Information gebraucht wird"
         ></textarea>
       </div>
       <div crsdField>
@@ -80,5 +103,5 @@
       </div>
     </div>
   }
-  <button type="button" crsdBtn variant="outline" (click)="add()">Seite hinzufügen</button>
+  <button type="button" crsdBtn variant="outline" (click)="add()">Eintrag hinzufügen</button>
 </fieldset>

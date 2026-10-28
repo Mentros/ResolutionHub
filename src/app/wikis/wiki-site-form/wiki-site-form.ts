@@ -3,6 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, distinctUntilChanged, map, of, switchMap } from 'rxjs';
+import { isValidWikiLocation } from '../../core/documentation-location';
 import { apiErrorMessage } from '../../core/issue-api';
 import { TAGS_URL } from '../../core/labels-api';
 import { WikiSiteInput } from '../../core/models';
@@ -65,7 +66,6 @@ export class WikiSiteForm {
   readonly error = signal<string | null>(null);
 
   readonly name = signal('');
-  readonly baseUrl = signal('');
   readonly summary = signal('');
   readonly entries = signal<WikiEntryDraft[]>([this.blankEntry()]);
 
@@ -111,14 +111,13 @@ export class WikiSiteForm {
       .subscribe((site) => {
         if (!site) return;
         this.name.set(site.name);
-        this.baseUrl.set(site.baseUrl);
         this.summary.set(site.summary);
         this.entries.set(
           site.entries.length > 0
             ? site.entries.map((entry) => ({
                 key: this.nextKey++,
                 title: entry.title,
-                pageUrl: entry.pageUrl,
+                locations: entry.locations.length > 0 ? [...entry.locations] : [''],
                 notes: entry.notes,
                 tags: entry.tags,
               }))
@@ -157,37 +156,39 @@ export class WikiSiteForm {
       this.error.set('Der Name ist erforderlich.');
       return null;
     }
-    const baseUrl = this.baseUrl().trim();
-    if (!baseUrl || !isHttpUrl(baseUrl)) {
-      this.error.set('Die Website-URL muss eine gültige http- oder https-Adresse sein.');
-      return null;
-    }
     const wikiEntries: WikiSiteInput['entries'] = [];
     for (const row of this.entries()) {
       const title = row.title.trim();
-      const pageUrl = row.pageUrl.trim();
       const notes = row.notes.trim();
-      if (!title && !pageUrl && !notes && row.tags.length === 0) {
+      const locations = row.locations.map((loc) => loc.trim()).filter(Boolean);
+      if (!title && locations.length === 0 && !notes && row.tags.length === 0) {
         continue;
       }
       if (!title) {
-        this.error.set('Jede Seite braucht einen Titel.');
+        this.error.set('Jeder Eintrag braucht einen Titel.');
         return null;
       }
-      if (!pageUrl || !isHttpUrl(pageUrl)) {
-        this.error.set('Jede Seite braucht eine gültige http- oder https-Adresse.');
+      for (const loc of locations) {
+        if (!isValidWikiLocation(loc)) {
+          this.error.set(
+            'Jeder Fundort muss eine gültige http- oder https-Adresse oder ein UNC-Pfad (\\\\server\\share\\…) sein.',
+          );
+          return null;
+        }
+      }
+      if (locations.length === 0 && !notes) {
+        this.error.set('Jeder Eintrag braucht mindestens einen Fundort oder eine Notiz.');
         return null;
       }
       wikiEntries.push({
         title,
-        pageUrl,
+        locations,
         notes,
         tags: row.tags,
       });
     }
     return {
       name,
-      baseUrl,
       summary: this.summary().trim(),
       entries: wikiEntries,
     };
@@ -195,21 +196,11 @@ export class WikiSiteForm {
 
   private reset(): void {
     this.name.set('');
-    this.baseUrl.set('');
     this.summary.set('');
     this.entries.set([this.blankEntry()]);
   }
 
   private blankEntry(): WikiEntryDraft {
-    return { key: this.nextKey++, title: '', pageUrl: '', notes: '', tags: [] };
-  }
-}
-
-function isHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:';
-  } catch {
-    return false;
+    return { key: this.nextKey++, title: '', locations: [''], notes: '', tags: [] };
   }
 }

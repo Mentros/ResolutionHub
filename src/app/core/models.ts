@@ -43,7 +43,7 @@ export interface WikiEntry {
   id: number;
   position: number;
   title: string;
-  pageUrl: string;
+  locations: string[];
   notes: string;
   tags: string[];
 }
@@ -51,7 +51,6 @@ export interface WikiEntry {
 export interface WikiSite {
   id: number;
   name: string;
-  baseUrl: string;
   summary: string;
   entries: WikiEntry[];
   createdAt: string;
@@ -61,7 +60,6 @@ export interface WikiSite {
 export interface WikiSiteSummary {
   id: number;
   name: string;
-  baseUrl: string;
   summary: string;
   tags: string[];
   entryCount: number;
@@ -76,14 +74,13 @@ export interface GlobalSearchResult {
 
 export interface WikiEntryInput {
   title: string;
-  pageUrl: string;
+  locations: string[];
   notes: string;
   tags: string[];
 }
 
 export interface WikiSiteInput {
   name: string;
-  baseUrl: string;
   summary: string;
   entries: WikiEntryInput[];
 }
