@@ -1,157 +1,100 @@
 <section [class]="pageSection">
-
   <header [class]="pageHead">
-
     <h1 [class]="pageTitle">Tickets finden</h1>
 
     <p [class]="pageLede">
-
-      Runbook durchsuchen: vergangene Tickets mit Lösungsschritten. Suche im Text oder grenze nach Programm ein, zum Beispiel Teams und Skype.
-
+      Vergangene Tickets mit Lösungsschritten
     </p>
-
   </header>
 
-
-
   <div [class]="pageSearchPanel">
-
     <div class="flex flex-wrap items-center justify-between gap-2">
-
       <span class="text-sm font-medium text-foreground">Suche und Filter</span>
 
       @if (hasFilter()) {
-
-        <button type="button" crsdBtn variant="link" size="sm" class="h-auto px-0 py-0" (click)="clearFilters()">
-
+        <button
+          type="button"
+          crsdBtn
+          variant="link"
+          size="sm"
+          class="h-auto px-0 py-0"
+          (click)="clearFilters()"
+        >
           Alles zurücksetzen
-
         </button>
-
       }
-
     </div>
 
-
-
     <app-list-search-input
-
       inputId="issue-search"
-
       placeholder="Meeting beitreten, Skype, Firewall"
-
       [value]="draft()"
-
       (valueChange)="onQueryInput($event)"
-
       (cleared)="onSearchCleared()"
-
     />
 
-
-
-    <app-tag-filter [tags]="tagCatalog" [selected]="selectedTags" groupLabel="Nach Bezeichnung filtern" [embedded]="true" />
-
+    <app-tag-filter
+      [tags]="tagCatalog"
+      [selected]="selectedTags"
+      groupLabel="Nach Bezeichnung filtern"
+      [embedded]="true"
+    />
   </div>
 
-
-
   <div [class]="pageResults">
-
     <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-
       <div class="flex min-h-8 flex-wrap items-center gap-2">
-
         @if (results().status === 'ready') {
-
           <p class="m-0 text-sm text-muted-foreground">
-
             {{ resultCountLabel() }}
 
             @if (hasFilter()) {
-
               <span aria-hidden="true"> · </span>
 
               <span class="text-foreground/80">gefiltert</span>
-
             }
-
           </p>
-
         } @else if (results().status === 'loading') {
-
           <crsd-spinner size="sm" label="Tickets werden geladen" />
 
           <span class="text-sm text-muted-foreground">Tickets werden geladen…</span>
-
         }
-
       </div>
 
       <a routerLink="/issues/new" crsdBtn size="sm" class="shrink-0 rounded-sm">Neues Ticket</a>
-
     </div>
 
-
-
     @switch (results().status) {
-
       @case ('error') {
-
         <div crsdAlert variant="error">
-
           <p crsdAlertDescription>Tickets konnten nicht geladen werden. Läuft die API?</p>
-
         </div>
-
       }
 
       @case ('ready') {
-
         @if (results().issues.length === 0) {
-
           <div crsdEmpty>
-
             <p crsdEmptyDescription>
-
               @if (hasFilter()) {
-
                 Keine Tickets entsprechen dieser Suche.
-
               } @else {
-
-                Noch keine Tickets. <a routerLink="/issues/new" class="text-primary hover:underline">Erstes Ticket erfassen.</a>
-
+                Noch keine Tickets.
+                <a routerLink="/issues/new" class="text-primary hover:underline"
+                  >Erstes Ticket erfassen.</a
+                >
               }
-
             </p>
-
           </div>
-
         } @else {
-
           <ul class="grid list-none gap-3 p-0 m-0">
-
             @for (issue of results().issues; track issue.id) {
-
               <li>
-
                 <app-issue-card [issue]="issue" />
-
               </li>
-
             }
-
           </ul>
-
         }
-
       }
-
     }
-
   </div>
-
 </section>
-
-

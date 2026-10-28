@@ -9,6 +9,7 @@ import {
   CrsdAlert,
   CrsdAlertDescription,
   CrsdBtn,
+  CrsdConfirmDialog,
   CrsdEmpty,
   CrsdEmptyDescription,
   CrsdSpinner,
@@ -32,6 +33,7 @@ type DetailState =
     DetailRecordMeta,
     WikiEntryList,
     CrsdBtn,
+    CrsdConfirmDialog,
     CrsdSpinner,
     CrsdEmpty,
     CrsdEmptyDescription,
@@ -98,7 +100,6 @@ export class WikiSiteDetail {
 
   remove(site: WikiSite): void {
     if (this.deleting()) return;
-    if (!confirm('Dieses Wiki löschen? Die gespeicherten Seiten werden ebenfalls entfernt.')) return;
     this.deleting.set(true);
     this.error.set(null);
     this.api.deleteWikiSite(site.id).subscribe({

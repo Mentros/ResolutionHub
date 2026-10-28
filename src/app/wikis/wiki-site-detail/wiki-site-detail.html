@@ -45,16 +45,25 @@
             <button type="button" crsdBtn variant="outline" [routerLink]="['/wikis', site.id, 'edit']">
               Bearbeiten
             </button>
-            <button
-              type="button"
-              crsdBtn
-              variant="outline"
-              color="destructive"
-              [disabled]="deleting()"
-              (click)="remove(site)"
+            <crsd-confirm-dialog
+              title="Wiki löschen?"
+              description="Die gespeicherten Seiten werden ebenfalls entfernt."
+              cancelLabel="Abbrechen"
+              confirmLabel="Löschen"
+              [destructive]="true"
+              (confirmed)="remove(site)"
             >
-              {{ deleting() ? 'Wird gelöscht…' : 'Löschen' }}
-            </button>
+              <button
+                type="button"
+                crsdConfirmTrigger
+                crsdBtn
+                variant="outline"
+                color="destructive"
+                [disabled]="deleting()"
+              >
+                {{ deleting() ? 'Wird gelöscht…' : 'Löschen' }}
+              </button>
+            </crsd-confirm-dialog>
           </app-detail-record-meta>
         </header>
 

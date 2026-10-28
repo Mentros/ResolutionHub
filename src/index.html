@@ -9,15 +9,19 @@
     <script>
       (function () {
         try {
-          // Default palette only — docs "cursed/blessed" themes block light/dark tokens.
-          localStorage.setItem('crsd-theme', 'default');
-          delete document.documentElement.dataset.crsdTheme;
-          delete document.documentElement.dataset.crsdCursedIntensity;
-
           var colorMode = localStorage.getItem('crsd-color-mode');
           if (colorMode === 'light' || colorMode === 'dark') {
             document.documentElement.dataset.crsdColorScheme = colorMode;
             document.documentElement.style.colorScheme = colorMode;
+          }
+
+          var theme = localStorage.getItem('crsd-theme') || localStorage.getItem('crsd-docs-theme');
+          if (theme === 'cursed') {
+            document.documentElement.dataset.crsdTheme = 'cursed';
+            document.documentElement.dataset.crsdCursedIntensity =
+              localStorage.getItem('crsd-cursed-intensity') || 'medium';
+          } else if (theme === 'blessed') {
+            document.documentElement.dataset.crsdTheme = 'blessed';
           }
         } catch (_) {}
       })();

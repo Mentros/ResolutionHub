@@ -1,13 +1,14 @@
+import { provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
+import { provideCrsdTheme } from '@mentros/crsd-ui';
 import { App } from './app';
-import { appConfig } from './app.config';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [...appConfig.providers, provideRouter([])],
+      providers: [provideHttpClient(), provideCrsdTheme(), provideRouter([])],
     })
       .overrideComponent(App, {
         set: {

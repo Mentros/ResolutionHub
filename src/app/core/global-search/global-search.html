@@ -55,7 +55,7 @@
         }
 
         @if (draft().trim().length > 0) {
-          <div class="max-h-[min(40vh,16rem)] overflow-y-auto overscroll-contain">
+          <div class="crsd-scroll max-h-[min(40vh,16rem)] overflow-y-auto overscroll-contain pr-1">
             @if (loading()) {
               <div class="flex items-center gap-2 text-sm text-muted-foreground">
                 <crsd-spinner size="sm" label="Suche läuft" />

@@ -9,6 +9,7 @@ import {
   CrsdAlert,
   CrsdAlertDescription,
   CrsdBtn,
+  CrsdConfirmDialog,
   CrsdEmpty,
   CrsdEmptyDescription,
   CrsdSpinner,
@@ -32,6 +33,7 @@ type DetailState =
     DetailRecordMeta,
     CheckpointList,
     CrsdBtn,
+    CrsdConfirmDialog,
     CrsdSpinner,
     CrsdEmpty,
     CrsdEmptyDescription,
@@ -98,7 +100,6 @@ export class IssueDetail {
 
   remove(issue: Issue): void {
     if (this.deleting()) return;
-    if (!confirm('Dieses Ticket löschen? Die zugehörigen Schritte werden ebenfalls entfernt.')) return;
     this.deleting.set(true);
     this.error.set(null);
     this.api.deleteIssue(issue.id).subscribe({

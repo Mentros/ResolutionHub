@@ -17,7 +17,13 @@
 
       <app-global-search class="min-w-0 flex-1" />
 
-      <app-color-mode-toggle class="shrink-0" />
+      <div
+        class="flex shrink-0 items-center gap-1 w-[6rem] sm:w-[10.5rem]"
+        aria-label="Erscheinungsbild"
+      >
+        <app-theme-toggle />
+        <app-color-mode-toggle />
+      </div>
 
       <nav class="flex shrink-0 items-center gap-0.5" aria-label="Hauptnavigation">
         <a

@@ -6,6 +6,7 @@ import {
   CrsdAlert,
   CrsdAlertDescription,
   CrsdBtn,
+  CrsdConfirmDialog,
   CrsdEmpty,
   CrsdEmptyDescription,
   CrsdField,
@@ -30,6 +31,7 @@ import {
     CrsdLabel,
     CrsdInput,
     CrsdBtn,
+    CrsdConfirmDialog,
     CrsdSpinner,
     CrsdEmpty,
     CrsdEmptyDescription,
@@ -37,12 +39,6 @@ import {
     CrsdAlertDescription,
   ],
   templateUrl: './tags-page.html',
-  styles: `
-    .labels-scroll {
-      scrollbar-gutter: stable;
-      scrollbar-width: thin;
-    }
-  `,
 })
 export class TagsPage {
   private readonly tagApi = inject(TagApi);
@@ -76,13 +72,6 @@ export class TagsPage {
 
   removeTag(name: string): void {
     if (this.saving()) return;
-    if (
-      !confirm(
-        `Bezeichnung „${name}“ entfernen? Sie wird von Tickets und Wiki-Einträgen entfernt, die sie verwenden.`,
-      )
-    ) {
-      return;
-    }
     this.saving.set(true);
     this.error.set(null);
     this.tagApi.delete(name).subscribe({
