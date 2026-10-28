@@ -14,7 +14,7 @@ Issue and wiki list search uses **SQLite FTS5** (`issue_search`, `wiki_site_sear
 
 Domain tables: `issues` (with `checkpoints_json`), `wiki_sites` (with `entries_json`), `tags`, `issue_tags`, `wiki_tags`, plus FTS virtual tables. Schema version is stored in `PRAGMA user_version` (3). Upgrading from older files migrates automatically on API start.
 
-UI components come from [@mentros/crsd-ui](https://github.com/Mentros/CursedUiLibrary). Clone `CursedUiLibrary` next to this repo and run `npm install` here — `postinstall` builds the sibling library when needed and links `dist/ui`. After you change the library, run `npm run build` in `CursedUiLibrary` (or `npm install` here to rebuild when sources are newer than `dist`). Keep Angular versions aligned between the two projects so the compiled library matches the app.
+UI components come from [@mentros/crsd-ui](https://github.com/Mentros/CursedUiLibrary). This repo vendors a release tarball under `vendor/` so you only need `npm install` here — no sibling `CursedUiLibrary` checkout. To bump the UI kit, replace `vendor/mentros-crsd-ui-*.tgz` and the `file:` version in `package.json`, or install from [GitHub Packages](https://github.com/Mentros/CursedUiLibrary#consume-from-github-packages) instead of the vendored tarball.
 
 ## Run
 
