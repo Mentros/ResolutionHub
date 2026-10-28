@@ -1,23 +1,18 @@
 @if (labels.length > 0) {
   <ul class="flex flex-wrap gap-1.5 p-0 m-0 list-none">
     @for (name of labels; track name) {
-      <li
-        crsdBadge
-        [color]="color"
-        variant="soft"
-        size="sm"
-        class="max-w-full gap-1 pr-1"
-        [attr.title]="name"
-      >
-        <span class="truncate">{{ name }}</span>
-        <button
-          type="button"
-          class="inline-flex size-4 shrink-0 items-center justify-center rounded-sm border-0 bg-transparent p-0 text-inherit opacity-70 hover:opacity-100"
-          [attr.aria-label]="name + ' entfernen'"
-          (click)="removeLabel.emit(name)"
+      <li class="max-w-full min-w-0">
+        <crsd-removable-badge
+          variant="soft"
+          [color]="color"
+          size="sm"
+          [removeLabel]="name + ' entfernen'"
+          [attr.title]="name"
+          class="max-w-full"
+          (dismiss)="removeLabel.emit(name)"
         >
-          ×
-        </button>
+          <span class="truncate">{{ name }}</span>
+        </crsd-removable-badge>
       </li>
     }
   </ul>

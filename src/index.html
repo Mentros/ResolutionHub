@@ -6,6 +6,22 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <script>
+      (function () {
+        try {
+          // Default palette only — docs "cursed/blessed" themes block light/dark tokens.
+          localStorage.setItem('crsd-theme', 'default');
+          delete document.documentElement.dataset.crsdTheme;
+          delete document.documentElement.dataset.crsdCursedIntensity;
+
+          var colorMode = localStorage.getItem('crsd-color-mode');
+          if (colorMode === 'light' || colorMode === 'dark') {
+            document.documentElement.dataset.crsdColorScheme = colorMode;
+            document.documentElement.style.colorScheme = colorMode;
+          }
+        } catch (_) {}
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>

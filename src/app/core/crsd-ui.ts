@@ -10,6 +10,9 @@ export const btnDestructive = cn(
   BUTTON_SIZES.md,
 );
 
+/** Shared max width for header and main content. */
+export const appShell = 'mx-auto w-full max-w-6xl px-4';
+
 export const pageSection = 'flex flex-col gap-4';
 export const pageSearchPanel =
   'flex flex-col gap-4 rounded-xl border border-border bg-muted/20 p-4 shadow-sm';

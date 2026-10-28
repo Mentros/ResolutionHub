@@ -1,9 +1,9 @@
 import { Component, Input, output } from '@angular/core';
-import { CrsdBadge, type CrsdBadgeColor } from '@mentros/crsd-ui';
+import { CrsdRemovableBadge, type CrsdBadgeColor } from '@mentros/crsd-ui';
 
 @Component({
   selector: 'app-removable-label-chips',
-  imports: [CrsdBadge],
+  imports: [CrsdRemovableBadge],
   templateUrl: './removable-label-chips.html',
   styles: ':host { display: block; }',
 })
