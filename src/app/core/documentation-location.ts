@@ -9,7 +9,7 @@ export function isHttpUrl(value: string): boolean {
 
 export function isSharePath(value: string): boolean {
   const trimmed = value.trim();
-  return trimmed.startsWith('\\\\') || trimmed.startsWith('//');
+  return trimmed.startsWith('\\\\') || trimmed.startsWith('//') || /^[A-Za-z]:[\\/]/.test(trimmed);
 }
 
 export function isValidWikiLocation(value: string): boolean {

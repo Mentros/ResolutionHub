@@ -331,9 +331,7 @@ function migrateToV3(): void {
           const programNames = tableExists('wiki_entry_programs')
             ? readPrograms.all(entryId).map((r) => text(r['name']))
             : [];
-          const topicNames = readTopics
-            ? readTopics.all(entryId).map((r) => text(r['name']))
-            : [];
+          const topicNames = readTopics ? readTopics.all(entryId).map((r) => text(r['name'])) : [];
           const pageUrl = text(entry['pageUrl']);
           stored.push({
             title: text(entry['title']),
@@ -465,17 +463,23 @@ function normalizeUrl(value: unknown): string | null {
   try {
     url = new URL(trimmed);
   } catch {
-    throw new HttpError(400, 'Externe Dokumentation muss eine gültige http- oder https-Adresse sein.');
+    throw new HttpError(
+      400,
+      'Externe Dokumentation muss eine gültige http- oder https-Adresse sein.',
+    );
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    throw new HttpError(400, 'Externe Dokumentation muss eine gültige http- oder https-Adresse sein.');
+    throw new HttpError(
+      400,
+      'Externe Dokumentation muss eine gültige http- oder https-Adresse sein.',
+    );
   }
   return url.toString();
 }
 
 function isSharePath(value: string): boolean {
   const trimmed = value.trim();
-  return trimmed.startsWith('\\\\') || trimmed.startsWith('//');
+  return trimmed.startsWith('\\\\') || trimmed.startsWith('//') || /^[A-Za-z]:[\\/]/.test(trimmed);
 }
 
 function normalizeWikiLocation(value: unknown, label: string): string {
@@ -494,7 +498,10 @@ function normalizeWikiLocation(value: unknown, label: string): string {
   }
   const url = normalizeUrl(trimmed);
   if (!url) {
-    throw new HttpError(400, `${label} muss eine gültige http- oder https-Adresse oder ein UNC-Pfad sein.`);
+    throw new HttpError(
+      400,
+      `${label} muss eine gültige http- oder https-Adresse oder ein UNC-Pfad sein.`,
+    );
   }
   return url;
 }
@@ -704,7 +711,10 @@ function replaceIssueTags(issueId: number, tags: string[]): void {
   for (const name of tags) {
     const tag = findTag.get(name);
     if (!tag) {
-      throw new HttpError(400, `Unbekannte Bezeichnung „${name}“. Lege sie zuerst unter Bezeichnungen an.`);
+      throw new HttpError(
+        400,
+        `Unbekannte Bezeichnung „${name}“. Lege sie zuerst unter Bezeichnungen an.`,
+      );
     }
     link.run(issueId, num(tag['id']));
   }
@@ -778,7 +788,9 @@ export function updateIssue(id: number, body: unknown): Issue {
       sharePath: step.sharePath,
     }));
     db()
-      .prepare('UPDATE issues SET title = ?, summary = ?, checkpoints_json = ?, updated_at = ? WHERE id = ?')
+      .prepare(
+        'UPDATE issues SET title = ?, summary = ?, checkpoints_json = ?, updated_at = ? WHERE id = ?',
+      )
       .run(input.title, input.summary, JSON.stringify(stored), new Date().toISOString(), id);
     replaceIssueTags(id, input.tags);
     rebuildSearch(id);
@@ -838,10 +850,7 @@ function parseWikiSiteInput(body: unknown): WikiSiteInput {
       throw new HttpError(400, 'Jeder Eintrag braucht einen Titel.');
     }
     if (locations.length === 0 && !notes) {
-      throw new HttpError(
-        400,
-        'Jeder Eintrag braucht mindestens einen Fundort oder eine Notiz.',
-      );
+      throw new HttpError(400, 'Jeder Eintrag braucht mindestens einen Fundort oder eine Notiz.');
     }
     entries.push({ title, locations, notes, tags });
   }
@@ -871,7 +880,10 @@ function validateEntryTags(entries: WikiEntryInput[]): void {
     for (const name of entry.tags) {
       const tag = findTag.get(name);
       if (!tag) {
-        throw new HttpError(400, `Unbekannte Bezeichnung „${name}“. Lege sie zuerst unter Bezeichnungen an.`);
+        throw new HttpError(
+          400,
+          `Unbekannte Bezeichnung „${name}“. Lege sie zuerst unter Bezeichnungen an.`,
+        );
       }
     }
   }
@@ -883,7 +895,9 @@ function syncWikiTagsFromJson(wikiSiteId: number, entriesJson: string): void {
   const entries = parseEntriesJson(entriesJson);
   const names = mergeTagNames(...entries.map((e) => e.tags));
   const findTag = connection.prepare('SELECT id FROM tags WHERE name = ?');
-  const link = connection.prepare('INSERT OR IGNORE INTO wiki_tags (wiki_site_id, tag_id) VALUES (?, ?)');
+  const link = connection.prepare(
+    'INSERT OR IGNORE INTO wiki_tags (wiki_site_id, tag_id) VALUES (?, ?)',
+  );
   for (const name of names) {
     const tag = findTag.get(name);
     if (!tag) continue;
@@ -969,7 +983,14 @@ export function updateWikiSite(id: number, body: unknown): WikiSite {
       .prepare(
         'UPDATE wiki_sites SET name = ?, base_url = ?, summary = ?, entries_json = ?, updated_at = ? WHERE id = ?',
       )
-      .run(input.name, '', input.summary, JSON.stringify(input.entries), new Date().toISOString(), id);
+      .run(
+        input.name,
+        '',
+        input.summary,
+        JSON.stringify(input.entries),
+        new Date().toISOString(),
+        id,
+      );
     syncWikiTagsFromEntries(id, input.entries);
     rebuildWikiSearch(id);
     const site = getWikiSite(id);
@@ -1047,7 +1068,9 @@ export function listWikiSites(
 
   let rows: Record<string, SQLOutputValue>[];
   try {
-    rows = db().prepare(sql).all(...params);
+    rows = db()
+      .prepare(sql)
+      .all(...params);
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
     if (message.toLowerCase().includes('fts5')) {
@@ -1094,7 +1117,11 @@ function uniqueLabelNames(names: string[]): string[] {
   return unique;
 }
 
-export function listIssues(query: string, tags: string[], options?: ListQueryOptions): IssueSummary[] {
+export function listIssues(
+  query: string,
+  tags: string[],
+  options?: ListQueryOptions,
+): IssueSummary[] {
   const trimmedQuery = query.trim();
   if (trimmedQuery.length > 200) {
     throw new HttpError(400, 'Der Suchtext ist zu lang.');
@@ -1129,9 +1156,7 @@ export function listIssues(query: string, tags: string[], options?: ListQueryOpt
   const ftsJoin = fts
     ? 'INNER JOIN issue_search ON issue_search.rowid = i.id AND issue_search MATCH ?'
     : '';
-  const snippetSelect = fts
-    ? ", snippet(issue_search, -1, '', '', '…', 16) AS searchSnippet"
-    : '';
+  const snippetSelect = fts ? ", snippet(issue_search, -1, '', '', '…', 16) AS searchSnippet" : '';
 
   const sql = `
     SELECT
@@ -1150,7 +1175,9 @@ export function listIssues(query: string, tags: string[], options?: ListQueryOpt
 
   let rows: Record<string, SQLOutputValue>[];
   try {
-    rows = db().prepare(sql).all(...params);
+    rows = db()
+      .prepare(sql)
+      .all(...params);
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
     if (message.toLowerCase().includes('fts5')) {
@@ -1276,7 +1303,16 @@ function seedIfEmpty(): void {
   const row = db().prepare('SELECT COUNT(*) AS count FROM issues').get();
   if (num(row?.['count']) > 0) return;
 
-  ensureTags(['Teams', 'tickets', 'Skype', 'EF3', 'BASIC', 'Crosslease', 'documentation', 'error codes']);
+  ensureTags([
+    'Teams',
+    'tickets',
+    'Skype',
+    'EF3',
+    'BASIC',
+    'Crosslease',
+    'documentation',
+    'error codes',
+  ]);
 
   insertIssue(
     {
