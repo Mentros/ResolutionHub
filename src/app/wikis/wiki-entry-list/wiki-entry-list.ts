@@ -1,7 +1,7 @@
 import { Component, Input, signal } from '@angular/core';
 import { CrsdBtn, CrsdCard } from '@mentros/crsd-ui';
-import { writeClipboard } from '../../core/clipboard';
-import { isHttpUrl } from '../../core/documentation-location';
+import { writeClipboard } from '../../core/util/clipboard';
+import { isHttpUrl } from '../../core/util/documentation-location';
 import { WikiEntry } from '../../core/models';
 import { TagList } from '../../issues/tag-list/tag-list';
 

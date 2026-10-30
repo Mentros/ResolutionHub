@@ -12,7 +12,7 @@ Issue and wiki list search uses **SQLite FTS5** (`issue_search`, `wiki_site_sear
 
 ### SQLite schema (lean)
 
-Domain tables: `issues` (with `checkpoints_json`), `wiki_sites` (with `entries_json`), `tags`, `issue_tags`, `wiki_tags`, plus FTS virtual tables. Schema version is stored in `PRAGMA user_version` (4). Upgrading from older files migrates automatically on API start.
+Domain tables: `issues` (with `checkpoints_json`), `wiki_sites` (with `entries_json`), `tags` (optional `parent_id` for programs under a language such as BASIC), `issue_tags`, `wiki_tags`, plus FTS virtual tables. Schema version is stored in `PRAGMA user_version` (5). Upgrading from older files migrates automatically on API start.
 
 UI components come from [@mentros/crsd-ui](https://github.com/Mentros/CursedUiLibrary). This repo vendors a release tarball under `vendor/` so you only need `npm install` here — no sibling `CursedUiLibrary` checkout. To bump the UI kit, replace `vendor/mentros-crsd-ui-*.tgz` and the `file:` version in `package.json`, or install from [GitHub Packages](https://github.com/Mentros/CursedUiLibrary#consume-from-github-packages) instead of the vendored tarball.
 

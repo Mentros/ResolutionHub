@@ -1,7 +1,7 @@
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
-import { Component, WritableSignal, inject, signal } from '@angular/core';
+import { Component, WritableSignal, computed, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
-import { TagApi, TAGS_URL, apiErrorMessage } from '../../core/labels-api';
+import { TagApi, TAG_ENTRIES_URL, TagListEntry, apiErrorMessage } from '../../core/api/labels-api';
 import {
   CrsdAlert,
   CrsdAlertDescription,
@@ -13,6 +13,13 @@ import {
   CrsdInput,
   CrsdLabel,
   CrsdSpinner,
+  CrsdIcon,
+  CrsdSelect,
+  CrsdSelectContent,
+  CrsdSelectPlaceholder,
+  CrsdSelectPortal,
+  CrsdSelectTrigger,
+  type CrsdOption,
 } from '@mentros/crsd-ui';
 import { BackLink } from '../../core/back-link/back-link';
 import {
@@ -21,7 +28,7 @@ import {
   pageLede,
   pageSection,
   pageTitle,
-} from '../../core/crsd-ui';
+} from '../../core/ui/crsd-ui';
 
 @Component({
   selector: 'app-tags-page',
@@ -37,6 +44,12 @@ import {
     CrsdEmptyDescription,
     CrsdAlert,
     CrsdAlertDescription,
+    CrsdIcon,
+    CrsdSelect,
+    CrsdSelectTrigger,
+    CrsdSelectPortal,
+    CrsdSelectContent,
+    CrsdSelectPlaceholder,
   ],
   templateUrl: './tags-page.html',
 })
@@ -44,6 +57,7 @@ export class TagsPage {
   private readonly tagApi = inject(TagApi);
 
   readonly draft = signal('');
+  readonly parentDraft = signal<string | null>(null);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   protected readonly pageSection = pageSection;
@@ -52,11 +66,23 @@ export class TagsPage {
   protected readonly pageLede = pageLede;
   protected readonly btnPrimary = btnPrimary;
 
-  private readonly tagResource = httpResource<string[]>(() => ({ url: TAGS_URL }), {
-    defaultValue: [] as string[],
+  private readonly tagResource = httpResource<TagListEntry[]>(() => ({ url: TAG_ENTRIES_URL }), {
+    defaultValue: [] as TagListEntry[],
   });
 
-  readonly tags = this.tagResource.value;
+  readonly entries = computed(() =>
+    this.tagResource.status() === 'error' ? [] : this.tagResource.value(),
+  );
+
+  readonly parentOptions = computed((): CrsdOption[] => {
+    const roots = this.entries()
+      .filter((entry) => entry.parent == null)
+      .map((entry) => entry.name);
+    return [
+      { value: '', label: 'Keine (allgemeine Bezeichnung)' },
+      ...roots.map((name) => ({ value: name, label: name })),
+    ];
+  });
 
   readonly loading = () => {
     const status = this.tagResource.status();
@@ -65,8 +91,16 @@ export class TagsPage {
 
   addTag(event: Event): void {
     event.preventDefault();
-    this.addName(this.draft, this.saving, (name) => this.tagApi.create(name), () =>
-      this.tagResource.reload(),
+    const parentRaw = this.parentDraft();
+    const parent = parentRaw && parentRaw.length > 0 ? parentRaw : null;
+    this.addName(
+      this.draft,
+      this.saving,
+      (name) => this.tagApi.create(name, parent),
+      () => {
+        this.parentDraft.set(null);
+        this.tagResource.reload();
+      },
     );
   }
 
@@ -84,6 +118,10 @@ export class TagsPage {
         this.error.set(apiErrorMessage(err, 'Die Bezeichnung konnte nicht entfernt werden.'));
       },
     });
+  }
+
+  onParentPick(value: string | null): void {
+    this.parentDraft.set(value && value.length > 0 ? value : null);
   }
 
   private addName(

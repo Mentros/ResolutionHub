@@ -1,4 +1,4 @@
-import { Component, Input, Signal, WritableSignal, computed, input, signal } from '@angular/core';
+import { Component, Input, Signal, WritableSignal, input, signal } from '@angular/core';
 import { CrsdBtn, CrsdIcon, CrsdInput } from '@mentros/crsd-ui';
 
 /** Chip rows before the filter panel scrolls (~2 rows of chips). */
@@ -23,11 +23,17 @@ export class TagFilter {
 
   readonly expanded = signal(false);
 
-  readonly showChipQuery = computed(() => this.tags().length >= CHIP_QUERY_THRESHOLD);
+  readonly scrollMaxHeight = SCROLL_MAX_HEIGHT;
 
-  readonly showExpandToggle = computed(() => this.visibleTags().length > EXPAND_THRESHOLD);
+  showChipQuery(): boolean {
+    return this.tags().length >= CHIP_QUERY_THRESHOLD;
+  }
 
-  readonly visibleTags = computed(() => {
+  showExpandToggle(): boolean {
+    return this.visibleTags().length > EXPAND_THRESHOLD;
+  }
+
+  visibleTags(): string[] {
     const tags = this.tags();
     const q = this.chipQuery().trim().toLowerCase();
     if (!q) {
@@ -37,15 +43,13 @@ export class TagFilter {
     return tags.filter(
       (tag) => tag.toLowerCase().includes(q) || selectedLower.has(tag.toLowerCase()),
     );
-  });
+  }
 
-  readonly panelClass = computed(() =>
-    this.embedded()
+  panelClass(): string {
+    return this.embedded()
       ? 'flex flex-col gap-3 border-t border-border/70 pt-4'
-      : 'flex flex-col gap-3 rounded-xl border border-border bg-muted/20 p-4 shadow-sm',
-  );
-
-  readonly scrollMaxHeight = SCROLL_MAX_HEIGHT;
+      : 'flex flex-col gap-3 rounded-xl border border-border bg-muted/20 p-4 shadow-sm';
+  }
 
   isSelected(tag: string): boolean {
     return this.selected().some((name) => name.toLowerCase() === tag.toLowerCase());
@@ -61,7 +65,10 @@ export class TagFilter {
   }
 
   clearSelected(): void {
-    this.selected.set([]);
+    const catalogLower = new Set(this.tags().map((name) => name.toLowerCase()));
+    this.selected.update((current) =>
+      current.filter((name) => !catalogLower.has(name.toLowerCase())),
+    );
   }
 
   resetChipQuery(): void {
@@ -69,6 +76,7 @@ export class TagFilter {
   }
 
   selectedCount(): number {
-    return this.selected().length;
+    const catalogLower = new Set(this.tags().map((name) => name.toLowerCase()));
+    return this.selected().filter((name) => catalogLower.has(name.toLowerCase())).length;
   }
 }

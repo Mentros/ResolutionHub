@@ -3,11 +3,11 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, distinctUntilChanged, map, of, switchMap } from 'rxjs';
-import { isValidWikiLocation } from '../../core/documentation-location';
-import { apiErrorMessage } from '../../core/issue-api';
-import { TAGS_URL } from '../../core/labels-api';
+import { isValidWikiLocation } from '../../core/util/documentation-location';
+import { apiErrorMessage } from '../../core/api/issue-api';
+import { TAGS_URL } from '../../core/api/labels-api';
 import { WikiSiteInput } from '../../core/models';
-import { WikiSiteApi } from '../../core/wiki-api';
+import { WikiSiteApi } from '../../core/api/wiki-api';
 import {
   CrsdAlert,
   CrsdAlertDescription,
@@ -27,7 +27,7 @@ import {
   pageLede,
   pageSection,
   pageTitle,
-} from '../../core/crsd-ui';
+} from '../../core/ui/crsd-ui';
 import { WikiEntryDraft, WikiEntryEditor } from '../wiki-entry-editor/wiki-entry-editor';
 
 @Component({

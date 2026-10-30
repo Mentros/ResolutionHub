@@ -3,7 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { distinctUntilChanged, map } from 'rxjs';
-import { WIKI_SITES_URL, WikiSiteApi } from '../../core/wiki-api';
+import { WIKI_SITES_URL, WikiSiteApi } from '../../core/api/wiki-api';
 import { WikiSite } from '../../core/models';
 import {
   CrsdAlert,
@@ -16,7 +16,7 @@ import {
 } from '@mentros/crsd-ui';
 import { BackLink } from '../../core/back-link/back-link';
 import { DetailRecordMeta } from '../../core/detail-record-meta/detail-record-meta';
-import { pageHead, pageLede, pageSection, pageTitle } from '../../core/crsd-ui';
+import { pageHead, pageLede, pageSection, pageTitle } from '../../core/ui/crsd-ui';
 import { WikiEntryList } from '../wiki-entry-list/wiki-entry-list';
 
 type DetailState =

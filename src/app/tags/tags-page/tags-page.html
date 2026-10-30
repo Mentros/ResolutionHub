@@ -4,8 +4,8 @@
   <header [class]="pageHead">
     <h1 [class]="pageTitle">Bezeichnungen</h1>
     <p [class]="pageLede">
-      Gepflegte Namen für Tickets und externe Wiki-Seiten (Teams, Dokumentation, …). Nur hier angelegte Namen können
-      zugeordnet werden.
+      Gepflegte Namen für Tickets und externe Wiki-Seiten (Teams, Dokumentation, …). Programme wie SXY100
+      können unter BASIC angelegt werden. Nur hier angelegte Namen können zugeordnet werden.
     </p>
   </header>
 
@@ -15,23 +15,43 @@
     </div>
   }
 
-  <form class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end" novalidate (submit)="addTag($event)">
-    <div crsdField class="min-w-0 flex-1">
-      <label crsdLabel for="new-tag">Neue Bezeichnung</label>
-      <input
-        id="new-tag"
-        crsdInput
-        [value]="draft()"
-        (valueChange)="draft.set($event)"
-        maxlength="40"
-        placeholder="Teams, Dokumentation, Fehlercodes"
-        autocomplete="off"
-        [disabled]="saving()"
-      />
+  <form class="mb-4 flex flex-col gap-3" novalidate (submit)="addTag($event)">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div crsdField class="min-w-0 flex-1">
+        <label crsdLabel for="new-tag">Neue Bezeichnung</label>
+        <input
+          id="new-tag"
+          crsdInput
+          [value]="draft()"
+          (valueChange)="draft.set($event)"
+          maxlength="40"
+          placeholder="Teams, Dokumentation, SXY100"
+          autocomplete="off"
+          [disabled]="saving()"
+        />
+      </div>
+      <div crsdField class="min-w-0 sm:w-56">
+        <label crsdLabel for="new-tag-parent">Übergeordnet</label>
+        <div
+          crsdSelect
+          id="new-tag-parent"
+          class="w-full"
+          [value]="parentDraft() ?? ''"
+          (valueChange)="onParentPick($event)"
+        >
+          <button crsdSelectTrigger type="button" [disabled]="saving()">
+            <span crsdSelectPlaceholder class="text-muted-foreground">Keine</span>
+            <crsd-icon name="chevron-down" class="ml-auto opacity-50" />
+          </button>
+          <ng-template crsdSelectPortal>
+            <ul crsdSelectContent [options]="parentOptions()"></ul>
+          </ng-template>
+        </div>
+      </div>
+      <button type="submit" [class]="btnPrimary" class="shrink-0" [disabled]="saving()">
+        {{ saving() ? 'Wird hinzugefügt…' : 'Hinzufügen' }}
+      </button>
     </div>
-    <button type="submit" [class]="btnPrimary" class="shrink-0" [disabled]="saving()">
-      {{ saving() ? 'Wird hinzugefügt…' : 'Hinzufügen' }}
-    </button>
   </form>
 
   @if (loading()) {
@@ -39,7 +59,7 @@
       <crsd-spinner size="sm" />
       <span>Bezeichnungen werden geladen…</span>
     </div>
-  } @else if (tags().length === 0) {
+  } @else if (entries().length === 0) {
     <div crsdEmpty class="rounded-lg border border-dashed border-border">
       <p crsdEmptyDescription>Noch keine Bezeichnungen.</p>
     </div>
@@ -49,16 +69,30 @@
         class="crsd-scroll m-0 max-h-[min(26rem,60vh)] list-none divide-y divide-border overflow-y-auto p-0"
         aria-label="Bezeichnungen"
       >
-        @for (name of tags(); track name) {
-          <li class="flex items-center gap-3 bg-background px-3 py-2.5 sm:px-4">
-            <span class="min-w-0 flex-1 truncate text-sm" [attr.title]="name">{{ name }}</span>
+        @for (entry of entries(); track entry.name) {
+          <li
+            class="flex items-center gap-3 bg-background py-2.5 pr-3 sm:pr-4"
+            [class]="
+              entry.parent
+                ? 'border-l-2 border-l-primary/25 pl-10 sm:pl-12'
+                : 'pl-3 sm:pl-4'
+            "
+          >
+            <div class="min-w-0 flex-1">
+              <span class="block truncate text-sm" [attr.title]="entry.name">{{ entry.name }}</span>
+              @if (entry.parent) {
+                <span class="block truncate text-xs text-muted-foreground">
+                  Programm unter {{ entry.parent }}
+                </span>
+              }
+            </div>
             <crsd-confirm-dialog
-              [title]="'„' + name + '“ entfernen?'"
+              [title]="'„' + entry.name + '“ entfernen?'"
               description="Die Bezeichnung wird von Tickets und Wiki-Einträgen entfernt, die sie verwenden."
               cancelLabel="Abbrechen"
               confirmLabel="Entfernen"
               [destructive]="true"
-              (confirmed)="removeTag(name)"
+              (confirmed)="removeTag(entry.name)"
             >
               <button
                 type="button"

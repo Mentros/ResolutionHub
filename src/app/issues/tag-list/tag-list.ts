@@ -1,7 +1,8 @@
-import { Component, Input, computed, input, signal } from '@angular/core';
+import { Component, Input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CrsdBadge, CrsdBtn, type CrsdBadgeColor } from '@mentros/crsd-ui';
-import { queryParamsForTagFilter } from '../../core/list-query-params';
+import { queryParamsForTagFilter } from '../../core/list/list-query-params';
+import { TagProgramGroup, parentForProgram, tagsForDisplayChips } from '../../core/tags/tag-programs';
 
 @Component({
   selector: 'app-tag-list',
@@ -11,12 +12,6 @@ import { queryParamsForTagFilter } from '../../core/list-query-params';
     :host {
       display: block;
       min-width: 0;
-    }
-    :host(.search-card-chips) {
-      display: contents;
-    }
-    :host(.search-card-chips) .tag-list-root {
-      display: contents;
     }
   `,
 })
@@ -29,34 +24,44 @@ export class TagList {
   @Input() collapseAfter = 0;
 
   /** When set, chips link to this list route with a tag filter (e.g. `/` or `/wikis`). */
-  readonly tagFilterPath = input<string | null>(null);
+  @Input() tagFilterPath: string | null = null;
+
+  /** Used to add parent language tags when filtering by a program chip. */
+  @Input() programGroups: TagProgramGroup[] = [];
 
   readonly expanded = signal(false);
 
   tagQueryParams(tag: string): Record<string, string | string[] | null> {
-    return queryParamsForTagFilter(tag);
+    const parent = parentForProgram(this.programGroups, tag);
+    return queryParamsForTagFilter(tag, parent ? [parent] : []);
   }
 
-  readonly badgeColor = computed((): CrsdBadgeColor => {
+  badgeColor(): CrsdBadgeColor {
     if (this.kind === 'topic') return 'info';
     return 'secondary';
-  });
+  }
 
-  readonly visibleTags = computed(() => {
+  displayTags(): string[] {
+    return tagsForDisplayChips(this.tags, this.programGroups);
+  }
+
+  visibleTags(): string[] {
+    const tags = this.displayTags();
     const limit = this.collapseAfter;
-    if (limit <= 0 || this.expanded() || this.tags.length <= limit) {
-      return this.tags;
+    if (limit <= 0 || this.expanded() || tags.length <= limit) {
+      return tags;
     }
-    return this.tags.slice(0, limit);
-  });
+    return tags.slice(0, limit);
+  }
 
-  readonly hiddenCount = computed(() => {
+  hiddenCount(): number {
+    const tags = this.displayTags();
     const limit = this.collapseAfter;
-    if (limit <= 0 || this.expanded() || this.tags.length <= limit) return 0;
-    return this.tags.length - limit;
-  });
+    if (limit <= 0 || this.expanded() || tags.length <= limit) return 0;
+    return tags.length - limit;
+  }
 
-  readonly showToggle = computed(
-    () => this.collapseAfter > 0 && this.tags.length > this.collapseAfter,
-  );
+  showToggle(): boolean {
+    return this.collapseAfter > 0 && this.displayTags().length > this.collapseAfter;
+  }
 }

@@ -1,7 +1,7 @@
 import { Component, Input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CrsdAlert, CrsdAlertDescription, CrsdBtn, CrsdCard } from '@mentros/crsd-ui';
-import { writeClipboard } from '../../core/clipboard';
+import { writeClipboard } from '../../core/util/clipboard';
 import { Checkpoint } from '../../core/models';
 
 @Component({

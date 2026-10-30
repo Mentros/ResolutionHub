@@ -51,12 +51,24 @@
       </div>
 
       <app-label-picker
+        #generalTagPicker
         fieldLabel="Bezeichnungen"
         inputId="issue-tags"
-        [selected]="tags"
-        [catalog]="knownTags"
+        [selected]="generalTags"
+        [catalog]="generalTagCatalog"
         unknownMessage="Wähle eine vorhandene Bezeichnung oder lege eine neue auf der Seite Bezeichnungen an."
       />
+
+      @if (showProgramPicker()) {
+        <app-label-picker
+          #programTagPicker
+          fieldLabel="Programm"
+          inputId="issue-programs"
+          [selected]="programTags"
+          [catalog]="basicProgramCatalog"
+          unknownMessage="Wähle ein BASIC-Programm oder lege es unter Bezeichnungen an."
+        />
+      }
 
       <app-checkpoint-editor [checkpoints]="checkpoints" />
 

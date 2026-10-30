@@ -6,7 +6,7 @@ import {
 } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Issue, IssueInput, IssueSummary } from './models';
+import { Issue, IssueInput, IssueSummary } from '../models';
 
 export const ISSUES_URL = '/api/issues';
 

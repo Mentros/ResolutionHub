@@ -15,11 +15,11 @@
 
   @if (tags.length > 0) {
     <app-tag-list
-      class="search-card-chips"
       [tags]="tags"
       kind="program"
       [collapseAfter]="collapseAfter"
       [tagFilterPath]="tagFilterPath"
+      [programGroups]="programGroups()"
     />
   }
 

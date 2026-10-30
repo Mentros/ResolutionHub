@@ -1,4 +1,4 @@
-@if (tags.length > 0) {
+@if (displayTags().length > 0) {
   <div class="tag-list-root flex min-w-0 flex-col gap-1">
     @if (caption) {
       <span class="text-xs font-medium text-muted-foreground">{{ caption }}</span>
@@ -6,18 +6,16 @@
     <ul class="flex flex-wrap gap-1.5 p-0 m-0 list-none">
       @for (tag of visibleTags(); track tag) {
         <li>
-          @if (tagFilterPath(); as filterPath) {
+          @if (tagFilterPath; as filterPath) {
             <a
-              crsdBadge
-              [color]="badgeColor()"
-              variant="soft"
-              size="sm"
-              class="max-w-[12rem] truncate no-underline hover:opacity-90"
+              class="inline-flex max-w-[12rem] truncate no-underline hover:opacity-90"
               [routerLink]="filterPath"
               [queryParams]="tagQueryParams(tag)"
               [attr.title]="'Nach „' + tag + '“ filtern'"
             >
-              {{ tag }}
+              <span crsdBadge [color]="badgeColor()" variant="soft" size="sm" class="max-w-[12rem] truncate">
+                {{ tag }}
+              </span>
             </a>
           } @else {
             <span
@@ -40,7 +38,7 @@
           variant="outline"
           size="sm"
           class="tabular-nums"
-          [attr.title]="'Außerdem: ' + tags.slice(collapseAfter).join(', ')"
+          [attr.title]="'Außerdem: ' + displayTags().slice(collapseAfter).join(', ')"
         >
           +{{ hiddenCount() }}
         </li>
@@ -55,7 +53,7 @@
         class="h-auto self-start px-0 py-0 text-xs"
         (click)="expanded.set(!expanded()); $event.stopPropagation()"
       >
-        {{ expanded() ? 'Weniger anzeigen' : 'Alle ' + tags.length + ' anzeigen' }}
+        {{ expanded() ? 'Weniger anzeigen' : 'Alle ' + displayTags().length + ' anzeigen' }}
       </button>
     }
   </div>

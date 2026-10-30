@@ -1,11 +1,22 @@
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, distinctUntilChanged, map, of, switchMap } from 'rxjs';
-import { IssueApi, apiErrorMessage } from '../../core/issue-api';
+import { IssueApi, apiErrorMessage } from '../../core/api/issue-api';
 import { LabelPicker } from '../../core/label-picker/label-picker';
-import { TAGS_URL } from '../../core/labels-api';
+import { TAGS_URL } from '../../core/api/labels-api';
+import {
+  BASIC_LANGUAGE_TAG,
+  TAG_PROGRAMS_URL,
+  TagProgramsResponse,
+  isBasicSelected,
+  filterGeneralTagCatalog,
+  mergeSelectedTags,
+  programNamesFromGroups,
+  programsForParent,
+  splitSelectedTags,
+} from '../../core/tags/tag-programs';
 import { IssueInput } from '../../core/models';
 import {
   CrsdAlert,
@@ -26,7 +37,7 @@ import {
   pageLede,
   pageSection,
   pageTitle,
-} from '../../core/crsd-ui';
+} from '../../core/ui/crsd-ui';
 import { CheckpointDraft, CheckpointEditor } from '../checkpoint-editor/checkpoint-editor';
 
 @Component({
@@ -57,7 +68,9 @@ export class IssueForm {
   protected readonly btnPrimary = btnPrimary;
   private readonly api = inject(IssueApi);
   private readonly router = inject(Router);
-  private readonly tagPicker = viewChild(LabelPicker);
+  private readonly route = inject(ActivatedRoute);
+  private readonly tagPicker = viewChild('generalTagPicker', { read: LabelPicker });
+  private readonly programTagPicker = viewChild('programTagPicker', { read: LabelPicker });
   private nextKey = 1;
 
   readonly editingId = signal<number | null>(null);
@@ -68,20 +81,50 @@ export class IssueForm {
 
   readonly title = signal('');
   readonly summary = signal('');
-  readonly tags = signal<string[]>([]);
+  readonly generalTags = signal<string[]>([]);
+  readonly programTags = signal<string[]>([]);
   readonly checkpoints = signal<CheckpointDraft[]>([this.blankCheckpoint()]);
 
   private readonly tagResource = httpResource<string[]>(() => ({ url: TAGS_URL }), {
     defaultValue: [] as string[],
   });
 
+  private readonly programGroupsResource = httpResource<TagProgramsResponse>(
+    () => ({ url: TAG_PROGRAMS_URL }),
+    { defaultValue: { groups: [] } },
+  );
+
+  readonly programGroups = computed(() =>
+    this.programGroupsResource.status() === 'error'
+      ? []
+      : this.programGroupsResource.value().groups,
+  );
+
+  readonly programNameSet = computed(() => programNamesFromGroups(this.programGroups()));
+
   readonly knownTags = computed(() =>
     this.tagResource.status() === 'error' ? [] : this.tagResource.value(),
   );
 
+  readonly generalTagCatalog = computed(() =>
+    filterGeneralTagCatalog(this.knownTags(), this.programNameSet()),
+  );
+
+  readonly basicProgramCatalog = computed(() =>
+    programsForParent(this.programGroups(), BASIC_LANGUAGE_TAG),
+  );
+
+  readonly showProgramPicker = computed(() => isBasicSelected(this.generalTags()));
+
   constructor() {
-    inject(ActivatedRoute)
-      .paramMap.pipe(
+    effect(() => {
+      if (!isBasicSelected(this.generalTags()) && this.programTags().length > 0) {
+        this.programTags.set([]);
+      }
+    });
+
+    this.route.paramMap
+      .pipe(
         map((params) => params.get('id')),
         distinctUntilChanged(),
         switchMap((raw) => {
@@ -114,7 +157,9 @@ export class IssueForm {
         if (!issue) return;
         this.title.set(issue.title);
         this.summary.set(issue.summary);
-        this.tags.set(issue.tags);
+        const { general, programs } = splitSelectedTags(issue.tags, this.programNameSet());
+        this.generalTags.set(general);
+        this.programTags.set(programs);
         this.checkpoints.set(
           issue.checkpoints.length > 0
             ? issue.checkpoints.map((step) => ({
@@ -135,6 +180,7 @@ export class IssueForm {
     event.preventDefault();
     if (this.saving()) return;
     if (this.tagPicker()?.commitDraft() === false) return;
+    if (this.programTagPicker()?.commitDraft() === false) return;
     const input = this.toInput();
     if (!input) return;
 
@@ -182,7 +228,7 @@ export class IssueForm {
     return {
       title,
       summary: this.summary().trim(),
-      tags: this.tags(),
+      tags: mergeSelectedTags(this.generalTags(), this.programTags()),
       checkpoints,
     };
   }
@@ -190,7 +236,8 @@ export class IssueForm {
   private reset(): void {
     this.title.set('');
     this.summary.set('');
-    this.tags.set([]);
+    this.generalTags.set([]);
+    this.programTags.set([]);
     this.checkpoints.set([this.blankCheckpoint()]);
   }
 

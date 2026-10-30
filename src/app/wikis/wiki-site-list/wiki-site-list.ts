@@ -1,12 +1,23 @@
 import { HttpResourceRef, httpResource } from '@angular/common/http';
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
-import { TAGS_URL } from '../../core/labels-api';
+import { TAGS_URL } from '../../core/api/labels-api';
 import { WikiSiteSummary } from '../../core/models';
-import { wikiSiteListRequest } from '../../core/wiki-api';
-import { WikiSearch } from '../../core/wiki-search';
+import {
+  BASIC_LANGUAGE_TAG,
+  TAG_PROGRAMS_URL,
+  TagProgramsResponse,
+  isBasicSelected,
+  mergeSelectedTags,
+  filterGeneralTagCatalog,
+  programNamesFromGroups,
+  programsForParent,
+  splitSelectedTags,
+} from '../../core/tags/tag-programs';
+import { wikiSiteListRequest } from '../../core/api/wiki-api';
+import { WikiSearch } from '../../core/search/wiki-search';
 import {
   CrsdAlert,
   CrsdAlertDescription,
@@ -22,9 +33,9 @@ import {
   pageSearchPanel,
   pageSection,
   pageTitle,
-} from '../../core/crsd-ui';
-import { ListSearchInput } from '../../core/list-search-input/list-search-input';
-import { wireListQueryUrlSync } from '../../core/list-query-url-sync';
+} from '../../core/ui/crsd-ui';
+import { ListSearchInput } from '../../core/list/list-search-input/list-search-input';
+import { wireListQueryUrlSync } from '../../core/list/list-query-url-sync';
 import { TagFilter } from '../../issues/tag-filter/tag-filter';
 import { WikiSiteCard } from '../wiki-site-card/wiki-site-card';
 
@@ -59,6 +70,7 @@ export class WikiSiteList {
   readonly search = inject(WikiSearch);
   readonly selectedTags = this.search.tags;
   readonly draft = signal(this.search.query());
+
   readonly hasFilter = computed(
     () => this.search.query().trim().length > 0 || this.selectedTags().length > 0,
   );
@@ -69,7 +81,33 @@ export class WikiSiteList {
     defaultValue: [] as string[],
   });
 
+  private readonly programGroupsResource = httpResource<TagProgramsResponse>(
+    () => ({ url: TAG_PROGRAMS_URL }),
+    { defaultValue: { groups: [] } },
+  );
+
   readonly tagCatalog = computed(() => catalogValue(this.tagResource));
+
+  readonly programGroups = computed(() =>
+    this.programGroupsResource.status() === 'error'
+      ? []
+      : this.programGroupsResource.value().groups,
+  );
+
+  readonly programNameSet = computed(() => programNamesFromGroups(this.programGroups()));
+
+  readonly generalTagCatalog = computed(() =>
+    filterGeneralTagCatalog(this.tagCatalog(), this.programNameSet()),
+  );
+
+  readonly basicProgramCatalog = computed(() =>
+    programsForParent(this.programGroups(), BASIC_LANGUAGE_TAG),
+  );
+
+  readonly showProgramFilter = computed(() => {
+    const { general } = splitSelectedTags(this.selectedTags(), this.programNameSet());
+    return isBasicSelected(general);
+  });
 
   private readonly siteResource = httpResource<WikiSiteSummary[]>(
     () => wikiSiteListRequest(this.search.query(), this.search.tags()),
@@ -78,7 +116,8 @@ export class WikiSiteList {
 
   readonly results = computed((): ResultState => listResultState(this.siteResource));
 
-  private readonly tagFilter = viewChild(TagFilter);
+  private readonly tagFilter = viewChild('generalTagFilter', { read: TagFilter });
+  private readonly programTagFilter = viewChild('programTagFilter', { read: TagFilter });
 
   readonly resultCountLabel = computed(() => {
     const count = this.results().status === 'ready' ? this.results().sites.length : 0;
@@ -94,6 +133,14 @@ export class WikiSiteList {
 
     this.queryChanges.pipe(debounceTime(200), takeUntilDestroyed()).subscribe((value) => {
       this.search.query.set(value);
+    });
+
+    effect(() => {
+      const tags = this.selectedTags();
+      const { general, programs } = splitSelectedTags(tags, this.programNameSet());
+      if (!isBasicSelected(general) && programs.length > 0) {
+        this.selectedTags.set(mergeSelectedTags(general, []));
+      }
     });
   }
 
@@ -112,6 +159,7 @@ export class WikiSiteList {
     this.search.query.set('');
     this.selectedTags.set([]);
     this.tagFilter()?.resetChipQuery();
+    this.programTagFilter()?.resetChipQuery();
   }
 }
 

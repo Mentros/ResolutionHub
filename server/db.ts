@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { DatabaseSync, type SQLOutputValue } from 'node:sqlite';
 import { dirname } from 'node:path';
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 export class HttpError extends Error {
   constructor(
@@ -128,6 +128,9 @@ export function initDatabase(dbPath: string): void {
     ensureSchemaV3();
     if (startVersion < 4) {
       migrateToV4();
+    }
+    if (startVersion < 5) {
+      migrateToV5();
     }
     setSchemaVersion(SCHEMA_VERSION);
   } else {
@@ -390,6 +393,34 @@ function migrateToV4(): void {
       update.run(JSON.stringify(entries), '', id);
       syncWikiTagsFromJson(id, JSON.stringify(entries));
       rebuildWikiSearch(id);
+    }
+  });
+}
+
+function migrateToV5(): void {
+  transaction(() => {
+    const connection = db();
+    if (!columnExists('tags', 'parent_id')) {
+      connection.exec(`
+        ALTER TABLE tags ADD COLUMN parent_id INTEGER REFERENCES tags(id) ON DELETE SET NULL;
+        CREATE INDEX IF NOT EXISTS idx_tags_parent ON tags(parent_id);
+      `);
+    }
+    ensureDefaultProgramTags();
+    connection.exec(`
+      INSERT OR IGNORE INTO issue_tags (issue_id, tag_id)
+      SELECT DISTINCT it.issue_id, parent.id
+      FROM issue_tags it
+      JOIN tags child ON child.id = it.tag_id
+      JOIN tags parent ON parent.id = child.parent_id
+      WHERE child.parent_id IS NOT NULL
+    `);
+    const issueIds = connection
+      .prepare('SELECT DISTINCT issue_id FROM issue_tags')
+      .all()
+      .map((row) => num(row['issue_id']));
+    for (const issueId of issueIds) {
+      rebuildSearch(issueId);
     }
   });
 }
@@ -703,12 +734,79 @@ export function getIssue(id: number): Issue | null {
   };
 }
 
+function findTagRowByName(name: string): { id: number; name: string; parentId: number | null } | null {
+  const row = db()
+    .prepare('SELECT id, name, parent_id AS parentId FROM tags WHERE name = ? COLLATE NOCASE')
+    .get(name);
+  if (!row) return null;
+  return {
+    id: num(row['id']),
+    name: text(row['name']),
+    parentId: row['parentId'] != null ? num(row['parentId']) : null,
+  };
+}
+
+function expandTagForFilter(name: string): string[] {
+  const root = findTagRowByName(name);
+  if (!root) {
+    return [name];
+  }
+  const seen = new Set<string>([root.name.toLowerCase()]);
+  const out = [root.name];
+  const readDescendants = db().prepare(`
+    WITH RECURSIVE descendants(id, name) AS (
+      SELECT id, name FROM tags WHERE parent_id = ?
+      UNION ALL
+      SELECT t.id, t.name FROM tags t
+      INNER JOIN descendants d ON t.parent_id = d.id
+    )
+    SELECT name FROM descendants
+  `);
+  for (const row of readDescendants.all(root.id)) {
+    const tagName = text(row['name']);
+    const key = tagName.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(tagName);
+  }
+  return out;
+}
+
+function ancestorTagNames(name: string): string[] {
+  const out: string[] = [];
+  let current = findTagRowByName(name);
+  const readParent = db().prepare('SELECT id, name, parent_id AS parentId FROM tags WHERE id = ?');
+  while (current?.parentId != null) {
+    const parent = readParent.get(current.parentId);
+    if (!parent) break;
+    const parentName = text(parent['name']);
+    out.push(parentName);
+    current = {
+      id: num(parent['id']),
+      name: parentName,
+      parentId: parent['parentId'] != null ? num(parent['parentId']) : null,
+    };
+  }
+  return out;
+}
+
+function normalizeIssueTags(tags: string[]): string[] {
+  const merged = uniqueLabelNames(tags);
+  const withAncestors: string[] = [];
+  for (const name of merged) {
+    withAncestors.push(name);
+    withAncestors.push(...ancestorTagNames(name));
+  }
+  return uniqueLabelNames(withAncestors);
+}
+
 function replaceIssueTags(issueId: number, tags: string[]): void {
+  const normalized = normalizeIssueTags(tags);
   const connection = db();
   connection.prepare('DELETE FROM issue_tags WHERE issue_id = ?').run(issueId);
   const findTag = connection.prepare('SELECT id FROM tags WHERE name = ?');
   const link = connection.prepare('INSERT INTO issue_tags (issue_id, tag_id) VALUES (?, ?)');
-  for (const name of tags) {
+  for (const name of normalized) {
     const tag = findTag.get(name);
     if (!tag) {
       throw new HttpError(
@@ -1135,19 +1233,18 @@ export function listIssues(
   if (fts) {
     params.push(fts);
   }
-  if (selectedTags.length > 0) {
-    const placeholders = selectedTags.map(() => '?').join(', ');
+  for (const chip of selectedTags) {
+    const expanded = expandTagForFilter(chip);
+    const placeholders = expanded.map(() => '?').join(', ');
     where.push(
       `i.id IN (
         SELECT it.issue_id
         FROM issue_tags it
         JOIN tags t ON t.id = it.tag_id
-        WHERE t.name IN (${placeholders})
-        GROUP BY it.issue_id
-        HAVING COUNT(DISTINCT t.id) = ?
+        WHERE lower(t.name) IN (${placeholders})
       )`,
     );
-    params.push(...selectedTags, selectedTags.length);
+    params.push(...expanded.map((n) => n.toLowerCase()));
   }
   if (limit !== undefined) {
     params.push(limit);
@@ -1214,11 +1311,58 @@ function clampListLimit(limit: number | undefined): number | undefined {
   return Math.min(limit, MAX_LIST_LIMIT);
 }
 
+export interface TagListEntry {
+  name: string;
+  parent: string | null;
+}
+
+export interface TagProgramGroup {
+  parent: string;
+  programs: string[];
+}
+
 export function listTags(): string[] {
   return db()
     .prepare('SELECT name FROM tags ORDER BY name COLLATE NOCASE')
     .all()
     .map((row) => text(row['name']));
+}
+
+export function listTagsDetailed(): TagListEntry[] {
+  return db()
+    .prepare(`
+      SELECT t.name, p.name AS parent
+      FROM tags t
+      LEFT JOIN tags p ON p.id = t.parent_id
+      ORDER BY COALESCE(p.name, t.name) COLLATE NOCASE, t.name COLLATE NOCASE
+    `)
+    .all()
+    .map((row) => ({
+      name: text(row['name']),
+      parent: row['parent'] != null ? text(row['parent']) : null,
+    }));
+}
+
+export function listTagPrograms(): { groups: TagProgramGroup[] } {
+  const rows = db()
+    .prepare(`
+      SELECT p.name AS parent, c.name AS program
+      FROM tags c
+      INNER JOIN tags p ON p.id = c.parent_id
+      ORDER BY p.name COLLATE NOCASE, c.name COLLATE NOCASE
+    `)
+    .all();
+  const groups = new Map<string, string[]>();
+  for (const row of rows) {
+    const parent = text(row['parent']);
+    const program = text(row['program']);
+    const list = groups.get(parent) ?? [];
+    list.push(program);
+    groups.set(parent, list);
+  }
+  return {
+    groups: [...groups.entries()].map(([parent, programs]) => ({ parent, programs })),
+  };
 }
 
 function parseLabelName(body: unknown, label: string): string {
@@ -1236,15 +1380,46 @@ function parseLabelName(body: unknown, label: string): string {
   return names[0];
 }
 
-export function createTag(body: unknown): { name: string } {
+function parseOptionalParent(body: Record<string, unknown>): string | null {
+  const raw = body['parent'];
+  if (raw == null || raw === '') {
+    return null;
+  }
+  if (typeof raw !== 'string') {
+    throw new HttpError(400, '„Übergeordnet“ muss Text sein.');
+  }
+  const names = normalizeLabelNames([raw], 'Übergeordnet');
+  if (names.length !== 1) {
+    throw new HttpError(400, '„Übergeordnet“ ist ungültig.');
+  }
+  return names[0];
+}
+
+export function createTag(body: unknown): { name: string; parent: string | null } {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new HttpError(400, '„Bezeichnung“ muss ein Objekt mit einem Namen sein.');
+  }
+  const record = body as Record<string, unknown>;
   const name = parseLabelName(body, 'Bezeichnung');
+  const parentName = parseOptionalParent(record);
   const connection = db();
   const existing = connection.prepare('SELECT id FROM tags WHERE name = ?').get(name);
   if (existing) {
     throw new HttpError(409, 'Eine Bezeichnung mit diesem Namen existiert bereits.');
   }
-  connection.prepare('INSERT INTO tags (name) VALUES (?)').run(name);
-  return { name };
+  let parentId: number | null = null;
+  if (parentName) {
+    const parent = findTagRowByName(parentName);
+    if (!parent) {
+      throw new HttpError(400, `Unbekannte übergeordnete Bezeichnung „${parentName}“.`);
+    }
+    if (parent.parentId != null) {
+      throw new HttpError(400, 'Programme können nur unter einer Sprache liegen, nicht unter einem anderen Programm.');
+    }
+    parentId = parent.id;
+  }
+  connection.prepare('INSERT INTO tags (name, parent_id) VALUES (?, ?)').run(name, parentId);
+  return { name, parent: parentName };
 }
 
 export function deleteTag(body: unknown): void {
@@ -1256,6 +1431,13 @@ export function deleteTag(body: unknown): void {
       throw new HttpError(404, 'Bezeichnung nicht gefunden.');
     }
     const tagId = num(tag['id']);
+    const childRow = connection.prepare('SELECT COUNT(*) AS count FROM tags WHERE parent_id = ?').get(tagId);
+    if (num(childRow?.['count']) > 0) {
+      throw new HttpError(
+        400,
+        'Diese Bezeichnung hat untergeordnete Programme. Entferne diese zuerst.',
+      );
+    }
     const issueIds = connection
       .prepare('SELECT issue_id FROM issue_tags WHERE tag_id = ?')
       .all(tagId)
@@ -1294,9 +1476,18 @@ function ensureTags(names: string[]): void {
   }
 }
 
+function linkTagToParent(childName: string, parentName: string): void {
+  const parent = findTagRowByName(parentName);
+  const child = findTagRowByName(childName);
+  if (!parent || !child) return;
+  db().prepare('UPDATE tags SET parent_id = ? WHERE id = ?').run(parent.id, child.id);
+}
+
 /** Core program labels always available in Bezeichnungen / filter chips. */
 function ensureDefaultProgramTags(): void {
-  ensureTags(['EF3', 'BASIC', 'Crosslease']);
+  ensureTags(['EF3', 'BASIC', 'Crosslease', 'SXY100', 'ZV1000']);
+  linkTagToParent('SXY100', 'BASIC');
+  linkTagToParent('ZV1000', 'BASIC');
 }
 
 function seedIfEmpty(): void {

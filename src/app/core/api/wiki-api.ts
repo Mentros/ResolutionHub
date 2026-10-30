@@ -5,7 +5,7 @@ import {
 } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { WikiSite, WikiSiteInput, WikiSiteSummary } from './models';
+import { WikiSite, WikiSiteInput, WikiSiteSummary } from '../models';
 
 export const WIKI_SITES_URL = '/api/wiki-sites';
 

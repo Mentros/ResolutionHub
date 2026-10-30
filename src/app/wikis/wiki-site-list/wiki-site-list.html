@@ -32,11 +32,22 @@
     />
 
     <app-tag-filter
-      [tags]="tagCatalog"
+      #generalTagFilter
+      [tags]="generalTagCatalog"
       [selected]="selectedTags"
       groupLabel="Nach Bezeichnung filtern"
       [embedded]="true"
     />
+
+    @if (showProgramFilter()) {
+      <app-tag-filter
+        #programTagFilter
+        [tags]="basicProgramCatalog"
+        [selected]="selectedTags"
+        groupLabel="Nach Programm filtern"
+        [embedded]="true"
+      />
+    }
   </div>
 
   <div [class]="pageResults">

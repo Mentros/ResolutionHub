@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CrsdIcon } from '@mentros/crsd-ui';
-import { backLink } from '../crsd-ui';
+import { backLink } from '../ui/crsd-ui';
 
 @Component({
   selector: 'app-back-link',

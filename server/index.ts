@@ -14,7 +14,9 @@ import {
   globalSearch,
   initDatabase,
   listIssues,
+  listTagPrograms,
   listTags,
+  listTagsDetailed,
   listWikiSites,
   updateIssue,
   updateWikiSite,
@@ -81,6 +83,16 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://127.0.0.1');
   const path = url.pathname.replace(/\/+$/, '') || '/';
   const method = req.method ?? 'GET';
+
+  if (path === '/api/tags/programs' && method === 'GET') {
+    send(res, 200, listTagPrograms());
+    return;
+  }
+
+  if (path === '/api/tags/entries' && method === 'GET') {
+    send(res, 200, listTagsDetailed());
+    return;
+  }
 
   if (path === '/api/tags' || path === '/api/programs') {
     if (method === 'GET') {

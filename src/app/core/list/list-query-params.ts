@@ -37,8 +37,19 @@ export function listQueryParamsForRouter(
 
 /** Stable string for comparing URL state with in-memory search state. */
 /** Query params for a single-tag list filter (shareable). */
-export function queryParamsForTagFilter(tag: string): Record<string, string | string[] | null> {
-  return listQueryParamsForRouter('', [tag]);
+export function queryParamsForTagFilter(
+  tag: string,
+  extraTags: string[] = [],
+): Record<string, string | string[] | null> {
+  const seen = new Set<string>();
+  const tags: string[] = [];
+  for (const name of [...extraTags, tag]) {
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    tags.push(name);
+  }
+  return listQueryParamsForRouter('', tags);
 }
 
 export function listQueryStateKey(state: ListQueryState): string {

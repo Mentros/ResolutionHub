@@ -29,10 +29,10 @@ import {
   type CrsdOpenState,
 } from '@mentros/crsd-ui';
 import { Subject, catchError, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
-import { apiErrorMessage } from '../issue-api';
-import { listQueryParamsForRouter } from '../list-query-params';
+import { apiErrorMessage } from '../api/issue-api';
+import { listQueryParamsForRouter } from '../list/list-query-params';
 import { GlobalSearchResult } from '../models';
-import { GlobalSearchApi } from '../global-search-api';
+import { GlobalSearchApi } from '../api/global-search-api';
 
 const EMPTY_RESULTS: GlobalSearchResult = { issues: [], wikiSites: [] };
 
@@ -128,17 +128,23 @@ export class GlobalSearch {
       return;
     }
     event.preventDefault();
+    this.resetSearchState();
     this.dialogState.set('open');
   }
 
   onDialogStateChange(state: CrsdOpenState): void {
     this.dialogState.set(state);
-    if (state === 'closed') {
-      this.draft.set('');
-      this.results.set(EMPTY_RESULTS);
-      this.error.set(null);
-      this.loading.set(false);
+    if (state === 'open' || state === 'closed') {
+      this.resetSearchState();
     }
+  }
+
+  private resetSearchState(): void {
+    this.draft.set('');
+    this.queryChanges.next('');
+    this.results.set(EMPTY_RESULTS);
+    this.error.set(null);
+    this.loading.set(false);
   }
 
   onInput(event: Event): void {
