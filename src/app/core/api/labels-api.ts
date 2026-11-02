@@ -9,6 +9,13 @@ export const TAGS_URL = '/api/tags';
 
 export const TAG_ENTRIES_URL = '/api/tags/entries';
 
+/** Limit tag lists to labels attached to issues or wikis (list filters). */
+export type TagUsedOnScope = 'issues' | 'wikis';
+
+export function tagsApiUrl(usedOn?: TagUsedOnScope): string {
+  return usedOn ? `${TAGS_URL}?usedOn=${usedOn}` : TAGS_URL;
+}
+
 export interface TagListEntry {
   name: string;
   parent: string | null;

@@ -17,6 +17,7 @@ import {
   listTagPrograms,
   listTags,
   listTagsDetailed,
+  type TagUsedOnScope,
   listWikiSites,
   updateIssue,
   updateWikiSite,
@@ -79,13 +80,21 @@ function parseNameList(url: URL, ...keys: string[]): string[] {
     .filter((value) => value.length > 0);
 }
 
+function parseTagUsedOnScope(url: URL): TagUsedOnScope | undefined {
+  const raw = url.searchParams.get('usedOn');
+  if (raw === 'issues' || raw === 'wikis') {
+    return raw;
+  }
+  return undefined;
+}
+
 async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://127.0.0.1');
   const path = url.pathname.replace(/\/+$/, '') || '/';
   const method = req.method ?? 'GET';
 
   if (path === '/api/tags/programs' && method === 'GET') {
-    send(res, 200, listTagPrograms());
+    send(res, 200, listTagPrograms(parseTagUsedOnScope(url)));
     return;
   }
 
@@ -96,7 +105,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
 
   if (path === '/api/tags' || path === '/api/programs') {
     if (method === 'GET') {
-      send(res, 200, listTags());
+      send(res, 200, listTags(parseTagUsedOnScope(url)));
       return;
     }
     if (method === 'POST') {

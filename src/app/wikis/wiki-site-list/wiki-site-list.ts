@@ -3,12 +3,12 @@ import { Component, computed, effect, inject, signal, viewChild } from '@angular
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
-import { TAGS_URL } from '../../core/api/labels-api';
+import { tagsApiUrl } from '../../core/api/labels-api';
 import { WikiSiteSummary } from '../../core/models';
 import {
   BASIC_LANGUAGE_TAG,
-  TAG_PROGRAMS_URL,
   TagProgramsResponse,
+  tagProgramsApiUrl,
   isBasicSelected,
   mergeSelectedTags,
   filterGeneralTagCatalog,
@@ -77,12 +77,12 @@ export class WikiSiteList {
 
   private readonly queryChanges = new Subject<string>();
 
-  private readonly tagResource = httpResource<string[]>(() => ({ url: TAGS_URL }), {
+  private readonly tagResource = httpResource<string[]>(() => ({ url: tagsApiUrl('wikis') }), {
     defaultValue: [] as string[],
   });
 
   private readonly programGroupsResource = httpResource<TagProgramsResponse>(
-    () => ({ url: TAG_PROGRAMS_URL }),
+    () => ({ url: tagProgramsApiUrl('wikis') }),
     { defaultValue: { groups: [] } },
   );
 

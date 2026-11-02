@@ -1321,7 +1321,29 @@ export interface TagProgramGroup {
   programs: string[];
 }
 
-export function listTags(): string[] {
+export type TagUsedOnScope = 'issues' | 'wikis';
+
+function listTagsUsedOn(scope: TagUsedOnScope): string[] {
+  const sql =
+    scope === 'issues'
+      ? `SELECT DISTINCT t.name AS name
+         FROM tags t
+         INNER JOIN issue_tags it ON it.tag_id = t.id
+         ORDER BY t.name COLLATE NOCASE`
+      : `SELECT DISTINCT t.name AS name
+         FROM tags t
+         INNER JOIN wiki_tags wt ON wt.tag_id = t.id
+         ORDER BY t.name COLLATE NOCASE`;
+  return db()
+    .prepare(sql)
+    .all()
+    .map((row) => text(row['name']));
+}
+
+export function listTags(usedOn?: TagUsedOnScope): string[] {
+  if (usedOn) {
+    return listTagsUsedOn(usedOn);
+  }
   return db()
     .prepare('SELECT name FROM tags ORDER BY name COLLATE NOCASE')
     .all()
@@ -1343,15 +1365,30 @@ export function listTagsDetailed(): TagListEntry[] {
     }));
 }
 
-export function listTagPrograms(): { groups: TagProgramGroup[] } {
-  const rows = db()
-    .prepare(`
+export function listTagPrograms(usedOn?: TagUsedOnScope): { groups: TagProgramGroup[] } {
+  const sql = usedOn
+    ? usedOn === 'issues'
+      ? `
+      SELECT p.name AS parent, c.name AS program
+      FROM tags c
+      INNER JOIN tags p ON p.id = c.parent_id
+      INNER JOIN issue_tags it ON it.tag_id = c.id
+      ORDER BY p.name COLLATE NOCASE, c.name COLLATE NOCASE
+    `
+      : `
+      SELECT p.name AS parent, c.name AS program
+      FROM tags c
+      INNER JOIN tags p ON p.id = c.parent_id
+      INNER JOIN wiki_tags wt ON wt.tag_id = c.id
+      ORDER BY p.name COLLATE NOCASE, c.name COLLATE NOCASE
+    `
+    : `
       SELECT p.name AS parent, c.name AS program
       FROM tags c
       INNER JOIN tags p ON p.id = c.parent_id
       ORDER BY p.name COLLATE NOCASE, c.name COLLATE NOCASE
-    `)
-    .all();
+    `;
+  const rows = db().prepare(sql).all();
   const groups = new Map<string, string[]>();
   for (const row of rows) {
     const parent = text(row['parent']);

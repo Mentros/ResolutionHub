@@ -11,6 +11,12 @@ export interface TagProgramsResponse {
 
 export const TAG_PROGRAMS_URL = '/api/tags/programs';
 
+export type TagUsedOnScope = 'issues' | 'wikis';
+
+export function tagProgramsApiUrl(usedOn?: TagUsedOnScope): string {
+  return usedOn ? `${TAG_PROGRAMS_URL}?usedOn=${usedOn}` : TAG_PROGRAMS_URL;
+}
+
 export function programNamesFromGroups(groups: TagProgramGroup[]): Set<string> {
   const names = new Set<string>();
   for (const group of groups) {

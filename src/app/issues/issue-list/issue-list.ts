@@ -4,13 +4,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
 import { issueListRequest } from '../../core/api/issue-api';
-import { TAGS_URL } from '../../core/api/labels-api';
+import { tagsApiUrl } from '../../core/api/labels-api';
 import { IssueSearch } from '../../core/search/issue-search';
 import { IssueSummary } from '../../core/models';
 import {
   BASIC_LANGUAGE_TAG,
-  TAG_PROGRAMS_URL,
   TagProgramsResponse,
+  tagProgramsApiUrl,
   isBasicSelected,
   mergeSelectedTags,
   filterGeneralTagCatalog,
@@ -77,12 +77,12 @@ export class IssueList {
 
   private readonly queryChanges = new Subject<string>();
 
-  private readonly tagResource = httpResource<string[]>(() => ({ url: TAGS_URL }), {
+  private readonly tagResource = httpResource<string[]>(() => ({ url: tagsApiUrl('issues') }), {
     defaultValue: [] as string[],
   });
 
   private readonly programGroupsResource = httpResource<TagProgramsResponse>(
-    () => ({ url: TAG_PROGRAMS_URL }),
+    () => ({ url: tagProgramsApiUrl('issues') }),
     { defaultValue: { groups: [] } },
   );
 
