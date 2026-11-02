@@ -4,11 +4,10 @@ import {
   CrsdCard,
   CrsdField,
   CrsdFieldDescription,
-  CrsdInput,
   CrsdLabel,
   CrsdTextarea,
 } from '@mentros/crsd-ui';
-import { LocationSuggestDatalist } from '../../core/location-suggest-datalist/location-suggest-datalist';
+import { LocationSuggestInput } from '../../core/location-suggest-input/location-suggest-input';
 
 export interface CheckpointDraft {
   key: number;
@@ -24,10 +23,9 @@ export interface CheckpointDraft {
     CrsdField,
     CrsdFieldDescription,
     CrsdLabel,
-    CrsdInput,
     CrsdTextarea,
     CrsdBtn,
-    LocationSuggestDatalist,
+    LocationSuggestInput,
   ],
   templateUrl: './checkpoint-editor.html',
   styles: ':host { display: contents; }',

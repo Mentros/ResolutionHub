@@ -82,15 +82,11 @@
                             <span class="line-clamp-2 text-xs text-muted-foreground">{{ issue.searchSnippet }}</span>
                           }
                         </button>
-                        @if (issue.tags.length > 0) {
-                          <app-tag-list
-                            class="mt-1"
-                            [tags]="issue.tags"
-                            [programGroups]="programGroups()"
-                            [collapseAfter]="3"
-                            [tagFilterNavigate]="navigateIssueTag"
-                          />
-                        }
+                        <app-global-search-result-tags
+                          [tags]="issue.tags"
+                          [programGroups]="programGroups()"
+                          [navigate]="navigateIssueTag"
+                        />
                       </li>
                     }
                   </ul>
@@ -121,15 +117,11 @@
                             <span class="line-clamp-2 text-xs text-muted-foreground">{{ site.searchSnippet }}</span>
                           }
                         </button>
-                        @if (site.tags.length > 0) {
-                          <app-tag-list
-                            class="mt-1"
-                            [tags]="site.tags"
-                            [programGroups]="programGroups()"
-                            [collapseAfter]="3"
-                            [tagFilterNavigate]="navigateWikiTag"
-                          />
-                        }
+                        <app-global-search-result-tags
+                          [tags]="site.tags"
+                          [programGroups]="programGroups()"
+                          [navigate]="navigateWikiTag"
+                        />
                       </li>
                     }
                   </ul>

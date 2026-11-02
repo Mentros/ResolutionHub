@@ -37,19 +37,15 @@
         <div class="flex flex-col gap-2" [attr.aria-labelledby]="'wiki-entry-locations-' + entry.key">
           @for (loc of entry.locations; track $index; let locIndex = $index) {
             <div class="flex flex-wrap items-center gap-2">
-              <input
-                [id]="'wiki-entry-loc-' + entry.key + '-' + locIndex"
-                crsdInput
-                class="min-w-0 flex-1"
-                [attr.list]="locationListId(entry.key, locIndex)"
+              <app-location-suggest-input
+                [inputId]="'wiki-entry-loc-' + entry.key + '-' + locIndex"
+                [listId]="locationListId(entry.key, locIndex)"
+                kind="all"
+                inputClass="min-w-0 flex-1"
                 [value]="loc"
                 (valueChange)="setLocation(entry.key, locIndex, $event)"
                 placeholder="https://… oder \\server\share\…"
-                spellcheck="false"
-              />
-              <app-location-suggest-datalist
-                [listId]="locationListId(entry.key, locIndex)"
-                kind="all"
+                [spellcheck]="false"
               />
               <button
                 type="button"

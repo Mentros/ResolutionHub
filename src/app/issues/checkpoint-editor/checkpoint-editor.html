@@ -32,29 +32,27 @@
       </div>
       <div crsdField>
         <label crsdLabel [attr.for]="'checkpoint-wiki-' + step.key">Externe Dokumentation (URL)</label>
-        <input
-          [id]="'checkpoint-wiki-' + step.key"
+        <app-location-suggest-input
+          [inputId]="'checkpoint-wiki-' + step.key"
+          [listId]="wikiListId(step.key)"
+          kind="url"
           type="url"
-          crsdInput
-          [attr.list]="wikiListId(step.key)"
           [value]="step.wikiUrl"
           (valueChange)="setField(step.key, 'wikiUrl', $event)"
           placeholder="https://wiki.example/teams-join"
         />
-        <app-location-suggest-datalist [listId]="wikiListId(step.key)" kind="url" />
       </div>
       <div crsdField>
         <label crsdLabel [attr.for]="'checkpoint-share-' + step.key">Freigabeordner</label>
-        <input
-          [id]="'checkpoint-share-' + step.key"
-          crsdInput
-          [attr.list]="shareListId(step.key)"
+        <app-location-suggest-input
+          [inputId]="'checkpoint-share-' + step.key"
+          [listId]="shareListId(step.key)"
+          kind="share"
           [value]="step.sharePath"
           (valueChange)="setField(step.key, 'sharePath', $event)"
           placeholder="\\server\share\folder"
-          spellcheck="false"
+          [spellcheck]="false"
         />
-        <app-location-suggest-datalist [listId]="shareListId(step.key)" kind="share" />
       </div>
     </div>
   }

@@ -1,0 +1,12 @@
+<input
+  [id]="inputId()"
+  [type]="type()"
+  crsdInput
+  [class]="inputClass()"
+  [attr.list]="listId()"
+  [value]="value()"
+  (valueChange)="valueChange.emit($event)"
+  [placeholder]="placeholder()"
+  [attr.spellcheck]="spellcheck()"
+/>
+<app-location-suggest-datalist [listId]="listId()" [kind]="kind()" />

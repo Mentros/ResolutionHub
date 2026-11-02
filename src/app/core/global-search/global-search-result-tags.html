@@ -1,0 +1,9 @@
+@if (tags().length > 0) {
+  <app-tag-list
+    class="mt-1 block"
+    [tags]="tags()"
+    [programGroups]="programGroups()"
+    [collapseAfter]="collapseAfter()"
+    [tagFilterNavigate]="navigate()"
+  />
+}

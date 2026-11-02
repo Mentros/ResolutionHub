@@ -35,7 +35,7 @@ import { listQueryParamsForRouter, queryParamsForTagFilter } from '../list/list-
 import { GlobalSearchResult } from '../models';
 import { GlobalSearchApi } from '../api/global-search-api';
 import { TAG_PROGRAMS_URL, TagProgramsResponse, parentForProgram } from '../tags/tag-programs';
-import { TagList } from '../../issues/tag-list/tag-list';
+import { GlobalSearchResultTags } from './global-search-result-tags';
 
 const EMPTY_RESULTS: GlobalSearchResult = { issues: [], wikiSites: [] };
 
@@ -61,7 +61,7 @@ const EMPTY_RESULTS: GlobalSearchResult = { issues: [], wikiSites: [] };
     CrsdSpinner,
     CrsdAlert,
     CrsdAlertDescription,
-    TagList,
+    GlobalSearchResultTags,
   ],
   templateUrl: './global-search.html',
 })
