@@ -16,7 +16,13 @@ import {
 } from '@mentros/crsd-ui';
 import { BackLink } from '../../core/back-link/back-link';
 import { DetailRecordMeta } from '../../core/detail-record-meta/detail-record-meta';
-import { pageHead, pageLede, pageSection, pageTitle } from '../../core/ui/crsd-ui';
+import {
+  pageHead,
+  pageLede,
+  pageLowerPanel,
+  pageSection,
+  pageTitle,
+} from '../../core/ui/crsd-ui';
 import { CheckpointList } from '../checkpoint-list/checkpoint-list';
 
 type DetailState =
@@ -47,6 +53,7 @@ export class IssueDetail {
   protected readonly pageHead = pageHead;
   protected readonly pageTitle = pageTitle;
   protected readonly pageLede = pageLede;
+  protected readonly pageLowerPanel = pageLowerPanel;
   private readonly api = inject(IssueApi);
   private readonly router = inject(Router);
 

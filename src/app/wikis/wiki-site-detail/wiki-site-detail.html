@@ -60,7 +60,10 @@
           </div>
         }
 
-        <app-wiki-entry-list [entries]="site.entries" />
+        <div [class]="pageLowerPanel">
+          <h2 class="text-xl font-semibold">Einträge</h2>
+          <app-wiki-entry-list [entries]="site.entries" />
+        </div>
       }
     }
   }

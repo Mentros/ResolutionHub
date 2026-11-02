@@ -36,6 +36,7 @@ import {
   btnPrimary,
   pageHead,
   pageLede,
+  pageLowerPanel,
   pageSection,
   pageTitle,
 } from '../../core/ui/crsd-ui';
@@ -66,6 +67,7 @@ export class IssueForm {
   protected readonly pageHead = pageHead;
   protected readonly pageTitle = pageTitle;
   protected readonly pageLede = pageLede;
+  protected readonly pageLowerPanel = pageLowerPanel;
   protected readonly btnPrimary = btnPrimary;
   private readonly api = inject(IssueApi);
   private readonly router = inject(Router);

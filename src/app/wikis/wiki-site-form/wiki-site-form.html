@@ -50,7 +50,9 @@
         ></textarea>
       </div>
 
-      <app-wiki-entry-editor [entries]="entries" [tagCatalog]="tagCatalog" />
+      <div [class]="pageLowerPanel">
+        <app-wiki-entry-editor [entries]="entries" [tagCatalog]="tagCatalog" />
+      </div>
 
       <div class="flex flex-wrap gap-2">
         <button type="submit" [class]="btnPrimary" [disabled]="saving()">

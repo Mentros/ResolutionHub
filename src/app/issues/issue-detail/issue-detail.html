@@ -63,7 +63,9 @@
           </div>
         }
 
-        <app-checkpoint-list [checkpoints]="issue.checkpoints" [issueId]="issue.id" />
+        <div [class]="pageLowerPanel">
+          <app-checkpoint-list [checkpoints]="issue.checkpoints" [issueId]="issue.id" />
+        </div>
       }
     }
   }

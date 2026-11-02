@@ -16,7 +16,9 @@ export const appShell = 'mx-auto w-full max-w-6xl px-4';
 export const pageSection = 'flex flex-col gap-4';
 export const pageSearchPanel =
   'flex flex-col gap-4 rounded-xl border border-border bg-muted/20 p-4 shadow-sm';
-export const pageResults = 'mt-2 flex flex-col gap-4 border-t border-border pt-6';
+export const pageLowerPanel =
+  'mt-2 flex flex-col gap-4 rounded-xl border border-border bg-muted/30 p-4 shadow-sm sm:p-5';
+export const pageResults = pageLowerPanel;
 export const pageHead = 'flex flex-col gap-2';
 export const pageTitle = 'text-3xl font-semibold tracking-tight';
 export const pageLede = 'max-w-2xl text-muted-foreground';
