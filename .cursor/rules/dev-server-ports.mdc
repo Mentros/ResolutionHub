@@ -1,0 +1,44 @@
+---
+description: Free dev-server ports after starting or testing (ng serve, API)
+alwaysApply: true
+---
+
+# Dev servers and ports
+
+When you start long-running dev processes for this repo, you own the ports they bind. Do not leave them running after you are done testing or when switching to another command on the same port.
+
+## Project ports
+
+| Service | Command | Default port |
+|---------|---------|--------------|
+| Angular app | `npm start` / `ng serve` | **4200** |
+| API | `npm run start:api` | **3000** |
+
+## Before starting a server
+
+1. Check whether the target port is already in use.
+2. If **you** (this session) started the listener, stop that process first.
+3. If another process holds the port and you did not start it, tell the user before killing it—or use a different port only if the user asks.
+
+## While testing
+
+- Prefer reusing one dev server when possible instead of starting duplicates.
+- If you must restart, stop the old process **before** starting a new one on the same port.
+
+## When finishing (required)
+
+Before ending the turn where you started servers, or when moving on from browser/manual testing:
+
+1. Stop every dev process **you** started in this conversation (background `npm start`, `npm run start:api`, etc.).
+2. On Windows, if unsure of the PID, find and stop the listener:
+
+```powershell
+netstat -ano | findstr ":4200.*LISTENING"
+Stop-Process -Id <PID> -Force -ErrorAction SilentlyContinue
+```
+
+Repeat for **3000** (and any other port you opened).
+
+3. Confirm the port is free (`findstr` returns nothing for `LISTENING`) or note that something else still holds it.
+
+Do not assume background tasks were cleaned up when Cursor marks them aborted; verify and release ports explicitly.
