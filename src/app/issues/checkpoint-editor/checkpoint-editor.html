@@ -36,21 +36,25 @@
           [id]="'checkpoint-wiki-' + step.key"
           type="url"
           crsdInput
+          [attr.list]="wikiListId(step.key)"
           [value]="step.wikiUrl"
           (valueChange)="setField(step.key, 'wikiUrl', $event)"
           placeholder="https://wiki.example/teams-join"
         />
+        <app-location-suggest-datalist [listId]="wikiListId(step.key)" kind="url" />
       </div>
       <div crsdField>
         <label crsdLabel [attr.for]="'checkpoint-share-' + step.key">Freigabeordner</label>
         <input
           [id]="'checkpoint-share-' + step.key"
           crsdInput
+          [attr.list]="shareListId(step.key)"
           [value]="step.sharePath"
           (valueChange)="setField(step.key, 'sharePath', $event)"
           placeholder="\\server\share\folder"
           spellcheck="false"
         />
+        <app-location-suggest-datalist [listId]="shareListId(step.key)" kind="share" />
       </div>
     </div>
   }

@@ -41,10 +41,15 @@
                 [id]="'wiki-entry-loc-' + entry.key + '-' + locIndex"
                 crsdInput
                 class="min-w-0 flex-1"
+                [attr.list]="locationListId(entry.key, locIndex)"
                 [value]="loc"
                 (valueChange)="setLocation(entry.key, locIndex, $event)"
                 placeholder="https://… oder \\server\share\…"
                 spellcheck="false"
+              />
+              <app-location-suggest-datalist
+                [listId]="locationListId(entry.key, locIndex)"
+                kind="all"
               />
               <button
                 type="button"

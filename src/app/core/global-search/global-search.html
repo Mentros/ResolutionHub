@@ -71,10 +71,10 @@
                   </h3>
                   <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
                     @for (issue of results().issues; track issue.id) {
-                      <li>
+                      <li class="rounded-md px-2 py-1.5 hover:bg-muted">
                         <button
                           type="button"
-                          class="flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                          class="flex w-full flex-col gap-0.5 text-left text-sm"
                           (click)="openIssue(issue.id)"
                         >
                           <span class="font-medium text-foreground">{{ issue.title }}</span>
@@ -82,6 +82,15 @@
                             <span class="line-clamp-2 text-xs text-muted-foreground">{{ issue.searchSnippet }}</span>
                           }
                         </button>
+                        @if (issue.tags.length > 0) {
+                          <app-tag-list
+                            class="mt-1"
+                            [tags]="issue.tags"
+                            [programGroups]="programGroups()"
+                            [collapseAfter]="3"
+                            [tagFilterNavigate]="navigateIssueTag"
+                          />
+                        }
                       </li>
                     }
                   </ul>
@@ -101,10 +110,10 @@
                   <h3 class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Wikis</h3>
                   <ul class="m-0 flex list-none flex-col gap-0.5 p-0">
                     @for (site of results().wikiSites; track site.id) {
-                      <li>
+                      <li class="rounded-md px-2 py-1.5 hover:bg-muted">
                         <button
                           type="button"
-                          class="flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                          class="flex w-full flex-col gap-0.5 text-left text-sm"
                           (click)="openWiki(site.id)"
                         >
                           <span class="font-medium text-foreground">{{ site.name }}</span>
@@ -112,6 +121,15 @@
                             <span class="line-clamp-2 text-xs text-muted-foreground">{{ site.searchSnippet }}</span>
                           }
                         </button>
+                        @if (site.tags.length > 0) {
+                          <app-tag-list
+                            class="mt-1"
+                            [tags]="site.tags"
+                            [programGroups]="programGroups()"
+                            [collapseAfter]="3"
+                            [tagFilterNavigate]="navigateWikiTag"
+                          />
+                        }
                       </li>
                     }
                   </ul>

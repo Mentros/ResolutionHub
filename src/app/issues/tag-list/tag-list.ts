@@ -26,6 +26,9 @@ export class TagList {
   /** When set, chips link to this list route with a tag filter (e.g. `/` or `/wikis`). */
   @Input() tagFilterPath: string | null = null;
 
+  /** When set, chips call this instead of routerLink (e.g. close a dialog first). */
+  @Input() tagFilterNavigate: ((tag: string) => void) | null = null;
+
   /** Used to add parent language tags when filtering by a program chip. */
   @Input() programGroups: TagProgramGroup[] = [];
 
@@ -63,5 +66,11 @@ export class TagList {
 
   showToggle(): boolean {
     return this.collapseAfter > 0 && this.displayTags().length > this.collapseAfter;
+  }
+
+  onTagFilterClick(tag: string, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.tagFilterNavigate?.(tag);
   }
 }

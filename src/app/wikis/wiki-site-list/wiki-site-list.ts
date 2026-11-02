@@ -1,19 +1,20 @@
 import { HttpResourceRef, httpResource } from '@angular/common/http';
-import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, signal, viewChild, viewChildren } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
 import { tagsApiUrl } from '../../core/api/labels-api';
 import { WikiSiteSummary } from '../../core/models';
 import {
-  BASIC_LANGUAGE_TAG,
   TagProgramsResponse,
   tagProgramsApiUrl,
-  isBasicSelected,
   mergeSelectedTags,
   filterGeneralTagCatalog,
+  programFilterRows,
+  programFilterLabel,
   programNamesFromGroups,
-  programsForParent,
+  pruneProgramsForGeneral,
+  programsSelectionChanged,
   splitSelectedTags,
 } from '../../core/tags/tag-programs';
 import { wikiSiteListRequest } from '../../core/api/wiki-api';
@@ -100,14 +101,12 @@ export class WikiSiteList {
     filterGeneralTagCatalog(this.tagCatalog(), this.programNameSet()),
   );
 
-  readonly basicProgramCatalog = computed(() =>
-    programsForParent(this.programGroups(), BASIC_LANGUAGE_TAG),
-  );
-
-  readonly showProgramFilter = computed(() => {
+  readonly programFilterRows = computed(() => {
     const { general } = splitSelectedTags(this.selectedTags(), this.programNameSet());
-    return isBasicSelected(general);
+    return programFilterRows(general, this.programGroups());
   });
+
+  readonly programFilterLabel = programFilterLabel;
 
   private readonly siteResource = httpResource<WikiSiteSummary[]>(
     () => wikiSiteListRequest(this.search.query(), this.search.tags()),
@@ -117,7 +116,7 @@ export class WikiSiteList {
   readonly results = computed((): ResultState => listResultState(this.siteResource));
 
   private readonly tagFilter = viewChild('generalTagFilter', { read: TagFilter });
-  private readonly programTagFilter = viewChild('programTagFilter', { read: TagFilter });
+  private readonly programTagFilters = viewChildren('programTagFilter', { read: TagFilter });
 
   readonly resultCountLabel = computed(() => {
     const count = this.results().status === 'ready' ? this.results().sites.length : 0;
@@ -138,8 +137,9 @@ export class WikiSiteList {
     effect(() => {
       const tags = this.selectedTags();
       const { general, programs } = splitSelectedTags(tags, this.programNameSet());
-      if (!isBasicSelected(general) && programs.length > 0) {
-        this.selectedTags.set(mergeSelectedTags(general, []));
+      const pruned = pruneProgramsForGeneral(general, programs, this.programGroups());
+      if (programsSelectionChanged(programs, pruned)) {
+        this.selectedTags.set(mergeSelectedTags(general, pruned));
       }
     });
   }
@@ -159,7 +159,9 @@ export class WikiSiteList {
     this.search.query.set('');
     this.selectedTags.set([]);
     this.tagFilter()?.resetChipQuery();
-    this.programTagFilter()?.resetChipQuery();
+    for (const filter of this.programTagFilters()) {
+      filter.resetChipQuery();
+    }
   }
 }
 

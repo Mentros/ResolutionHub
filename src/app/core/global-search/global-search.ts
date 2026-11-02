@@ -5,6 +5,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { httpResource } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import {
@@ -30,9 +31,11 @@ import {
 } from '@mentros/crsd-ui';
 import { Subject, catchError, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { apiErrorMessage } from '../api/issue-api';
-import { listQueryParamsForRouter } from '../list/list-query-params';
+import { listQueryParamsForRouter, queryParamsForTagFilter } from '../list/list-query-params';
 import { GlobalSearchResult } from '../models';
 import { GlobalSearchApi } from '../api/global-search-api';
+import { TAG_PROGRAMS_URL, TagProgramsResponse, parentForProgram } from '../tags/tag-programs';
+import { TagList } from '../../issues/tag-list/tag-list';
 
 const EMPTY_RESULTS: GlobalSearchResult = { issues: [], wikiSites: [] };
 
@@ -58,12 +61,24 @@ const EMPTY_RESULTS: GlobalSearchResult = { issues: [], wikiSites: [] };
     CrsdSpinner,
     CrsdAlert,
     CrsdAlertDescription,
+    TagList,
   ],
   templateUrl: './global-search.html',
 })
 export class GlobalSearch {
   private readonly api = inject(GlobalSearchApi);
   private readonly router = inject(Router);
+
+  private readonly programGroupsResource = httpResource<TagProgramsResponse>(
+    () => ({ url: TAG_PROGRAMS_URL }),
+    { defaultValue: { groups: [] } },
+  );
+
+  readonly programGroups = computed(() =>
+    this.programGroupsResource.status() === 'error'
+      ? []
+      : this.programGroupsResource.value().groups,
+  );
 
   readonly dialogState = signal<CrsdOpenState>('closed');
   readonly draft = signal('');
@@ -165,5 +180,21 @@ export class GlobalSearch {
   openWiki(id: number): void {
     this.dialogState.set('closed');
     void this.router.navigate(['/wikis', id]);
+  }
+
+  navigateIssueTag = (tag: string): void => {
+    this.navigateTagFilter('/', tag);
+  };
+
+  navigateWikiTag = (tag: string): void => {
+    this.navigateTagFilter('/wikis', tag);
+  };
+
+  private navigateTagFilter(path: string, tag: string): void {
+    this.dialogState.set('closed');
+    const parent = parentForProgram(this.programGroups(), tag);
+    void this.router.navigate([path], {
+      queryParams: queryParamsForTagFilter(tag, parent ? [parent] : []),
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { Component, Input, Signal, WritableSignal, input, signal } from '@angular/core';
+import { Component, Input, WritableSignal, input, signal } from '@angular/core';
 import { CrsdBtn, CrsdIcon, CrsdInput } from '@mentros/crsd-ui';
 
 /** Chip rows before the filter panel scrolls (~2 rows of chips). */
@@ -13,7 +13,7 @@ const CHIP_QUERY_THRESHOLD = 5;
   styles: ':host { display: block; }',
 })
 export class TagFilter {
-  @Input({ required: true }) tags!: Signal<string[]>;
+  readonly tags = input.required<string[]>();
   @Input({ required: true }) selected!: WritableSignal<string[]>;
   @Input() groupLabel = 'Nach Bezeichnung filtern';
 

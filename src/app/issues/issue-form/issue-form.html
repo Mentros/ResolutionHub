@@ -55,18 +55,20 @@
         fieldLabel="Bezeichnungen"
         inputId="issue-tags"
         [selected]="generalTags"
-        [catalog]="generalTagCatalog"
+        [catalog]="generalTagCatalog()"
         unknownMessage="Wähle eine vorhandene Bezeichnung oder lege eine neue auf der Seite Bezeichnungen an."
       />
 
-      @if (showProgramPicker()) {
+      @for (row of programFilterRows(); track row.parent) {
         <app-label-picker
           #programTagPicker
-          fieldLabel="Programm"
-          inputId="issue-programs"
+          [fieldLabel]="programFilterLabel(row.parent)"
+          [inputId]="'issue-programs-' + row.parent"
           [selected]="programTags"
-          [catalog]="basicProgramCatalog"
-          unknownMessage="Wähle ein BASIC-Programm oder lege es unter Bezeichnungen an."
+          [catalog]="row.programs"
+          [unknownMessage]="
+            'Wähle ein Programm unter ' + row.parent + ' oder lege es auf der Seite Bezeichnungen an.'
+          "
         />
       }
 

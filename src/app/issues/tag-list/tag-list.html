@@ -6,7 +6,18 @@
     <ul class="flex flex-wrap gap-1.5 p-0 m-0 list-none">
       @for (tag of visibleTags(); track tag) {
         <li>
-          @if (tagFilterPath; as filterPath) {
+          @if (tagFilterNavigate) {
+            <button
+              type="button"
+              class="inline-flex max-w-[12rem] truncate border-0 bg-transparent p-0 hover:opacity-90"
+              [attr.title]="'Nach „' + tag + '“ filtern'"
+              (click)="onTagFilterClick(tag, $event)"
+            >
+              <span crsdBadge [color]="badgeColor()" variant="soft" size="sm" class="max-w-[12rem] truncate">
+                {{ tag }}
+              </span>
+            </button>
+          } @else if (tagFilterPath; as filterPath) {
             <a
               class="inline-flex max-w-[12rem] truncate no-underline hover:opacity-90"
               [routerLink]="filterPath"

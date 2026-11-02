@@ -1,4 +1,4 @@
-import { Component, Input, Signal, WritableSignal, computed, signal } from '@angular/core';
+import { Component, Input, WritableSignal, computed, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { RemovableLabelChips } from '../label-chips/removable-label-chips';
 import {
@@ -40,7 +40,7 @@ export class LabelPicker {
   @Input({ required: true }) fieldLabel!: string;
   @Input({ required: true }) inputId!: string;
   @Input({ required: true }) selected!: WritableSignal<string[]>;
-  @Input({ required: true }) catalog!: Signal<string[]>;
+  readonly catalog = input.required<string[]>();
   @Input() unknownMessage = 'Wähle einen vorhandenen Namen oder lege einen neuen auf der Seite Bezeichnungen an.';
   @Input() manageHref = '/tags';
 

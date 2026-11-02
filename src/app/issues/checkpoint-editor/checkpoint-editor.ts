@@ -8,6 +8,7 @@ import {
   CrsdLabel,
   CrsdTextarea,
 } from '@mentros/crsd-ui';
+import { LocationSuggestDatalist } from '../../core/location-suggest-datalist/location-suggest-datalist';
 
 export interface CheckpointDraft {
   key: number;
@@ -18,7 +19,16 @@ export interface CheckpointDraft {
 
 @Component({
   selector: 'app-checkpoint-editor',
-  imports: [CrsdCard, CrsdField, CrsdFieldDescription, CrsdLabel, CrsdInput, CrsdTextarea, CrsdBtn],
+  imports: [
+    CrsdCard,
+    CrsdField,
+    CrsdFieldDescription,
+    CrsdLabel,
+    CrsdInput,
+    CrsdTextarea,
+    CrsdBtn,
+    LocationSuggestDatalist,
+  ],
   templateUrl: './checkpoint-editor.html',
   styles: ':host { display: contents; }',
 })
@@ -47,6 +57,14 @@ export class CheckpointEditor {
       next.splice(target, 0, row);
       return next;
     });
+  }
+
+  wikiListId(key: number): string {
+    return `checkpoint-wiki-list-${key}`;
+  }
+
+  shareListId(key: number): string {
+    return `checkpoint-share-list-${key}`;
   }
 
   setField(key: number, field: 'instruction' | 'wikiUrl' | 'sharePath', value: string): void {

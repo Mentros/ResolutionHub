@@ -64,6 +64,53 @@ export function isBasicSelected(general: string[]): boolean {
   return general.some((name) => name.toLowerCase() === BASIC_LANGUAGE_TAG.toLowerCase());
 }
 
+export interface ProgramFilterRow {
+  parent: string;
+  programs: string[];
+}
+
+/** Parents in `general` that have child programs in `groups`, in group order. */
+export function selectedProgramParents(general: string[], groups: TagProgramGroup[]): string[] {
+  const selected = new Set(general.map((name) => name.toLowerCase()));
+  const out: string[] = [];
+  for (const group of groups) {
+    if (selected.has(group.parent.toLowerCase())) {
+      out.push(group.parent);
+    }
+  }
+  return out;
+}
+
+export function programFilterRows(general: string[], groups: TagProgramGroup[]): ProgramFilterRow[] {
+  return selectedProgramParents(general, groups).map((parent) => ({
+    parent,
+    programs: programsForParent(groups, parent),
+  }));
+}
+
+export function programFilterLabel(parent: string): string {
+  return `Programme (${parent})`;
+}
+
+/** Drop program tags whose parent language is no longer selected. */
+export function pruneProgramsForGeneral(
+  general: string[],
+  programs: string[],
+  groups: TagProgramGroup[],
+): string[] {
+  return programs.filter((program) => {
+    const parent = parentForProgram(groups, program);
+    if (!parent) return true;
+    return general.some((name) => name.toLowerCase() === parent.toLowerCase());
+  });
+}
+
+export function programsSelectionChanged(before: string[], after: string[]): boolean {
+  if (before.length !== after.length) return true;
+  const seen = new Set(before.map((name) => name.toLowerCase()));
+  return after.some((name) => !seen.has(name.toLowerCase()));
+}
+
 export function parentForProgram(groups: TagProgramGroup[], program: string): string | null {
   const key = program.toLowerCase();
   for (const group of groups) {

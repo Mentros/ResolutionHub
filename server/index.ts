@@ -18,6 +18,8 @@ import {
   listTags,
   listTagsDetailed,
   type TagUsedOnScope,
+  listLocationSuggestions,
+  type LocationSuggestionKind,
   listWikiSites,
   updateIssue,
   updateWikiSite,
@@ -140,6 +142,17 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const limitRaw = Number(url.searchParams.get('limit') ?? '8');
     const limit = Number.isFinite(limitRaw) ? limitRaw : 8;
     send(res, 200, globalSearch(q, limit));
+    return;
+  }
+
+  if (path === '/api/locations/suggestions' && method === 'GET') {
+    const kindRaw = url.searchParams.get('kind') ?? 'all';
+    const kind: LocationSuggestionKind =
+      kindRaw === 'url' || kindRaw === 'share' || kindRaw === 'all' ? kindRaw : 'all';
+    const q = url.searchParams.get('q') ?? '';
+    const limitRaw = Number(url.searchParams.get('limit') ?? '200');
+    const limit = Number.isFinite(limitRaw) ? limitRaw : 200;
+    send(res, 200, listLocationSuggestions(kind, q, limit));
     return;
   }
 

@@ -33,18 +33,18 @@
 
     <app-tag-filter
       #generalTagFilter
-      [tags]="generalTagCatalog"
+      [tags]="generalTagCatalog()"
       [selected]="selectedTags"
       groupLabel="Nach Bezeichnung filtern"
       [embedded]="true"
     />
 
-    @if (showProgramFilter()) {
+    @for (row of programFilterRows(); track row.parent) {
       <app-tag-filter
         #programTagFilter
-        [tags]="basicProgramCatalog"
+        [tags]="row.programs"
         [selected]="selectedTags"
-        groupLabel="Nach Programm filtern"
+        [groupLabel]="programFilterLabel(row.parent)"
         [embedded]="true"
       />
     }

@@ -1305,6 +1305,104 @@ export function globalSearch(query: string, limit: number): GlobalSearchResult {
   };
 }
 
+export type LocationSuggestionKind = 'url' | 'share' | 'all';
+
+export interface LocationSuggestion {
+  value: string;
+  hint: string | null;
+}
+
+export interface LocationSuggestionsResult {
+  suggestions: LocationSuggestion[];
+}
+
+function isStoredHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function isStoredSharePath(value: string): boolean {
+  const trimmed = value.trim();
+  return (
+    trimmed.startsWith('\\\\') ||
+    trimmed.startsWith('//') ||
+    /^[A-Za-z]:[\\/]/.test(trimmed)
+  );
+}
+
+function locationKindOf(value: string): 'url' | 'share' | 'other' {
+  if (isStoredHttpUrl(value)) return 'url';
+  if (isStoredSharePath(value)) return 'share';
+  return 'other';
+}
+
+export function listLocationSuggestions(
+  kind: LocationSuggestionKind,
+  query: string,
+  limit: number,
+): LocationSuggestionsResult {
+  const capped = Math.min(Math.max(1, Number.isFinite(limit) ? limit : 50), 200);
+  const q = query.trim().toLowerCase();
+  const byValue = new Map<string, LocationSuggestion>();
+
+  const add = (value: string, hint: string | null): void => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    const locKind = locationKindOf(trimmed);
+    if (kind === 'url' && locKind !== 'url') return;
+    if (kind === 'share' && locKind !== 'share') return;
+    if (kind === 'all' && locKind === 'other') return;
+    if (q && !trimmed.toLowerCase().includes(q)) return;
+    const existing = byValue.get(trimmed);
+    if (!existing) {
+      byValue.set(trimmed, { value: trimmed, hint });
+      return;
+    }
+    if (!existing.hint && hint) {
+      byValue.set(trimmed, { value: trimmed, hint });
+    }
+  };
+
+  const issueRows = db()
+    .prepare('SELECT title, checkpoints_json AS checkpointsJson FROM issues')
+    .all();
+  for (const row of issueRows) {
+    const title = text(row['title']);
+    const hint = title ? `Ticket: ${title}` : null;
+    for (const step of parseCheckpointsJson(text(row['checkpointsJson']))) {
+      if (step.wikiUrl) add(step.wikiUrl, hint);
+      if (step.sharePath) add(step.sharePath, hint);
+    }
+  }
+
+  const wikiRows = db()
+    .prepare('SELECT name, entries_json AS entriesJson FROM wiki_sites')
+    .all();
+  for (const row of wikiRows) {
+    const siteName = text(row['name']);
+    for (const entry of parseEntriesJson(text(row['entriesJson']))) {
+      const entryHint =
+        siteName && entry.title
+          ? `Wiki: ${siteName} — ${entry.title}`
+          : siteName
+            ? `Wiki: ${siteName}`
+            : null;
+      for (const loc of entry.locations) {
+        add(loc, entryHint);
+      }
+    }
+  }
+
+  const suggestions = [...byValue.values()].sort((a, b) =>
+    a.value.localeCompare(b.value, undefined, { sensitivity: 'base' }),
+  );
+  return { suggestions: suggestions.slice(0, capped) };
+}
+
 function clampListLimit(limit: number | undefined): number | undefined {
   if (limit === undefined) return undefined;
   if (!Number.isInteger(limit) || limit < 1) return undefined;

@@ -16,6 +16,7 @@ import {
   type CrsdOption,
 } from '@mentros/crsd-ui';
 import { RemovableLabelChips } from '../../core/label-chips/removable-label-chips';
+import { LocationSuggestDatalist } from '../../core/location-suggest-datalist/location-suggest-datalist';
 
 export interface WikiEntryDraft {
   key: number;
@@ -42,6 +43,7 @@ export interface WikiEntryDraft {
     CrsdSelectContent,
     CrsdSelectPlaceholder,
     CrsdIcon,
+    LocationSuggestDatalist,
   ],
   templateUrl: './wiki-entry-editor.html',
   styles: ':host { display: contents; }',
@@ -148,6 +150,10 @@ export class WikiEntryEditor {
 
   tagPickerValue(key: number): string | null {
     return this.tagPick()[key] ?? null;
+  }
+
+  locationListId(entryKey: number, locIndex: number): string {
+    return `wiki-entry-loc-list-${entryKey}-${locIndex}`;
   }
 }
 

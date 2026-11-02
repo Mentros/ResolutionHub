@@ -1,5 +1,5 @@
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
-import { Component, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, signal, viewChild, viewChildren } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { catchError, distinctUntilChanged, map, of, switchMap } from 'rxjs';
@@ -7,14 +7,15 @@ import { IssueApi, apiErrorMessage } from '../../core/api/issue-api';
 import { LabelPicker } from '../../core/label-picker/label-picker';
 import { TAGS_URL } from '../../core/api/labels-api';
 import {
-  BASIC_LANGUAGE_TAG,
   TAG_PROGRAMS_URL,
   TagProgramsResponse,
-  isBasicSelected,
   filterGeneralTagCatalog,
   mergeSelectedTags,
+  programFilterLabel,
+  programFilterRows,
   programNamesFromGroups,
-  programsForParent,
+  pruneProgramsForGeneral,
+  programsSelectionChanged,
   splitSelectedTags,
 } from '../../core/tags/tag-programs';
 import { IssueInput } from '../../core/models';
@@ -70,7 +71,7 @@ export class IssueForm {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly tagPicker = viewChild('generalTagPicker', { read: LabelPicker });
-  private readonly programTagPicker = viewChild('programTagPicker', { read: LabelPicker });
+  private readonly programTagPickers = viewChildren('programTagPicker', { read: LabelPicker });
   private nextKey = 1;
 
   readonly editingId = signal<number | null>(null);
@@ -110,16 +111,19 @@ export class IssueForm {
     filterGeneralTagCatalog(this.knownTags(), this.programNameSet()),
   );
 
-  readonly basicProgramCatalog = computed(() =>
-    programsForParent(this.programGroups(), BASIC_LANGUAGE_TAG),
+  readonly programFilterRows = computed(() =>
+    programFilterRows(this.generalTags(), this.programGroups()),
   );
 
-  readonly showProgramPicker = computed(() => isBasicSelected(this.generalTags()));
+  readonly programFilterLabel = programFilterLabel;
 
   constructor() {
     effect(() => {
-      if (!isBasicSelected(this.generalTags()) && this.programTags().length > 0) {
-        this.programTags.set([]);
+      const general = this.generalTags();
+      const programs = this.programTags();
+      const pruned = pruneProgramsForGeneral(general, programs, this.programGroups());
+      if (programsSelectionChanged(programs, pruned)) {
+        this.programTags.set(pruned);
       }
     });
 
@@ -180,7 +184,9 @@ export class IssueForm {
     event.preventDefault();
     if (this.saving()) return;
     if (this.tagPicker()?.commitDraft() === false) return;
-    if (this.programTagPicker()?.commitDraft() === false) return;
+    for (const picker of this.programTagPickers()) {
+      if (picker.commitDraft() === false) return;
+    }
     const input = this.toInput();
     if (!input) return;
 
