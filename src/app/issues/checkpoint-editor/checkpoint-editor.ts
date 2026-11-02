@@ -57,14 +57,6 @@ export class CheckpointEditor {
     });
   }
 
-  wikiListId(key: number): string {
-    return `checkpoint-wiki-list-${key}`;
-  }
-
-  shareListId(key: number): string {
-    return `checkpoint-share-list-${key}`;
-  }
-
   setField(key: number, field: 'instruction' | 'wikiUrl' | 'sharePath', value: string): void {
     this.checkpoints.update((rows) =>
       rows.map((row) => (row.key === key ? { ...row, [field]: value } : row)),

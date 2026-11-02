@@ -152,9 +152,6 @@ export class WikiEntryEditor {
     return this.tagPick()[key] ?? null;
   }
 
-  locationListId(entryKey: number, locIndex: number): string {
-    return `wiki-entry-loc-list-${entryKey}-${locIndex}`;
-  }
 }
 
 function blankEntry(rows: WikiEntryDraft[]): WikiEntryDraft {

@@ -34,7 +34,6 @@
         <label crsdLabel [attr.for]="'checkpoint-wiki-' + step.key">Externe Dokumentation (URL)</label>
         <app-location-suggest-input
           [inputId]="'checkpoint-wiki-' + step.key"
-          [listId]="wikiListId(step.key)"
           kind="url"
           type="url"
           [value]="step.wikiUrl"
@@ -46,7 +45,6 @@
         <label crsdLabel [attr.for]="'checkpoint-share-' + step.key">Freigabeordner</label>
         <app-location-suggest-input
           [inputId]="'checkpoint-share-' + step.key"
-          [listId]="shareListId(step.key)"
           kind="share"
           [value]="step.sharePath"
           (entered)="setField(step.key, 'sharePath', $event)"

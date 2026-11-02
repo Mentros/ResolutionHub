@@ -1,12 +1,23 @@
-<input
-  [id]="inputId()"
-  [type]="type()"
-  crsdInput
-  [class]="inputClass()"
-  [attr.list]="listId()"
+<div
+  crsdAutocomplete
   [value]="value()"
   (valueChange)="entered.emit($event)"
-  [placeholder]="placeholder()"
-  [attr.spellcheck]="spellcheck()"
-/>
-<app-location-suggest-datalist [listId]="listId()" [kind]="kind()" />
+  [options]="options()"
+  [showOptionsAt]="0"
+  emptyLabel="Keine Treffer"
+  style="display: contents"
+>
+  <input
+    [id]="inputId()"
+    [type]="type()"
+    crsdInput
+    crsdAutocompleteTrigger
+    [class]="inputClass()"
+    [placeholder]="placeholder()"
+    [attr.spellcheck]="spellcheck()"
+    autocomplete="off"
+  />
+  <ng-template crsdAutocompletePortal>
+    <ul crsdAutocompleteContent [options]="options()" emptyLabel="Keine Treffer"></ul>
+  </ng-template>
+</div>

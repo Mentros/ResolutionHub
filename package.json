@@ -22,7 +22,7 @@
     "@angular/forms": "^22.2.0",
     "@angular/platform-browser": "^22.2.0",
     "@angular/router": "^22.2.0",
-    "@mentros/crsd-ui": "file:vendor/mentros-crsd-ui-0.4.6.tgz",
+    "@mentros/crsd-ui": "file:vendor/mentros-crsd-ui-0.4.9.tgz",
     "@tailwindcss/postcss": "^4.3.3",
     "clsx": "^2.1.1",
     "postcss": "^8.5.28",
