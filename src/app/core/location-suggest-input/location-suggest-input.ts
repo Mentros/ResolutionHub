@@ -19,5 +19,5 @@ export class LocationSuggestInput {
   readonly spellcheck = input<boolean | string>(false);
   readonly inputClass = input<string>('');
 
-  readonly valueChange = output<string>();
+  readonly entered = output<string>();
 }

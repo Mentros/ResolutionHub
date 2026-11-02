@@ -43,7 +43,7 @@
                 kind="all"
                 inputClass="min-w-0 flex-1"
                 [value]="loc"
-                (valueChange)="setLocation(entry.key, locIndex, $event)"
+                (entered)="setLocation(entry.key, locIndex, $event)"
                 placeholder="https://… oder \\server\share\…"
                 [spellcheck]="false"
               />

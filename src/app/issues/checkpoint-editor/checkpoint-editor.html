@@ -38,7 +38,7 @@
           kind="url"
           type="url"
           [value]="step.wikiUrl"
-          (valueChange)="setField(step.key, 'wikiUrl', $event)"
+          (entered)="setField(step.key, 'wikiUrl', $event)"
           placeholder="https://wiki.example/teams-join"
         />
       </div>
@@ -49,7 +49,7 @@
           [listId]="shareListId(step.key)"
           kind="share"
           [value]="step.sharePath"
-          (valueChange)="setField(step.key, 'sharePath', $event)"
+          (entered)="setField(step.key, 'sharePath', $event)"
           placeholder="\\server\share\folder"
           [spellcheck]="false"
         />

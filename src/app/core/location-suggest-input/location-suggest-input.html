@@ -5,7 +5,7 @@
   [class]="inputClass()"
   [attr.list]="listId()"
   [value]="value()"
-  (valueChange)="valueChange.emit($event)"
+  (valueChange)="entered.emit($event)"
   [placeholder]="placeholder()"
   [attr.spellcheck]="spellcheck()"
 />
